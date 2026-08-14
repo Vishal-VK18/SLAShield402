@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "slashield-escrow"
+version = "0.1.0"
+description = "SLAShield402 Algorand Escrow & Provider Bond Smart Contract"
+authors = ["SLAShield402 Team <dev@slashield402.io>"]
+readme = "README.md"
+packages = [{include = "contracts"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pyteal = "^0.27.0"
+py-algorand-sdk = "^2.11.0"
+algokit-utils = "^4.0.0"
+python-dotenv = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"

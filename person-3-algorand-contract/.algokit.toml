@@ -1,0 +1,15 @@
+[algokit]
+min_version = "v2.0.0"
+
+[project]
+name = "slashield-escrow"
+type = "contract"
+artifacts = "contracts/slashield_escrow/artifacts"
+
+[project.deploy]
+command = "python deployment/deploy.py"
+
+[project.run]
+settle = "python scripts/settle.py"
+refund = "python scripts/refundAndPenalize.py"
+register = "python scripts/registerProvider.py"
