@@ -1,0 +1,27 @@
+{
+  "name": "person-1-firewall-api",
+  "version": "1.0.0",
+  "description": "SLAShield402 - Person 1 Firewall & API Service",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "test": "tsx src/tests/firewall.test.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@hono/node-server": "^2.1.1",
+    "@x402/core": "^2.22.0",
+    "@x402/fetch": "^2.22.0",
+    "@x402/hono": "^2.22.0",
+    "dotenv": "^17.4.2",
+    "hono": "^4.13.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  }
+}
