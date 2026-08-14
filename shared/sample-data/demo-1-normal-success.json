@@ -1,0 +1,42 @@
+{
+  "scenario_name": "Demo 1 - Normal Success (Fresh Data, Valid Format, Fast Response)",
+  "description": "AI Agent calls a paid weather API with a 60s freshness SLA and 5s latency SLA. The provider returns valid, fresh data within 0.85s.",
+  "request": {
+    "payment_id": "REQ-2026-DEMO-001",
+    "target_api": "https://api.weather-provider-alpha.algo/v1/current?city=Bengaluru",
+    "agent_address": "YVEHNV3EWF4GULZHABH64QKOYLE5MO2MSBAAK7O76A2ESACA5OV2AZSOKQ",
+    "provider_address": "PROVIDERALPHA7X7J7K7L7M7N7P7Q7R7S7T7U7V7W7X7Y7Z234567890",
+    "offer_price": 0.02,
+    "offer_price_microunits": 20000,
+    "agent_budget_left": 1.00,
+    "sla_rules": {
+      "max_freshness_sec": 60,
+      "format": "JSON",
+      "max_latency_sec": 5.0,
+      "required_fields": ["city", "temp_c", "humidity", "timestamp"]
+    }
+  },
+  "execution": {
+    "measured_latency_sec": 0.85,
+    "response_headers": {
+      "content-type": "application/json",
+      "server": "x402-weather-gateway/1.2"
+    },
+    "response_body": {
+      "city": "Bengaluru",
+      "temp_c": 28.5,
+      "humidity": 62,
+      "condition": "Partly Cloudy",
+      "timestamp": "10 seconds ago",
+      "provider_tx_ref": "ALGO_TX_SUCCESS_99182"
+    }
+  },
+  "expected_outcome": {
+    "firewall_decision": "APPROVE",
+    "validator_result": "PASS",
+    "contract_action": "SETTLE",
+    "refund_amount": 0,
+    "settle_amount": 20000,
+    "penalty_slashed": 0
+  }
+}

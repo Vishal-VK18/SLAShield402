@@ -1,0 +1,27 @@
+{
+  "scenario_name": "Demo 2 - Price Too High / Budget Violation (Blocked by Firewall)",
+  "description": "AI Agent receives a quote that exceeds its remaining budget or is an anomalous price spike (0.50 USDC vs 0.15 USDC max budget). Firewall halts execution before payment.",
+  "request": {
+    "payment_id": "REQ-2026-DEMO-002",
+    "target_api": "https://api.marketdata-oracle.algo/v1/quote?ticker=ALGO_USDC",
+    "agent_address": "YVEHNV3EWF4GULZHABH64QKOYLE5MO2MSBAAK7O76A2ESACA5OV2AZSOKQ",
+    "provider_address": "EXPENSIVEPROVIDER999999999999999999999999999999999999999999",
+    "offer_price": 0.50,
+    "offer_price_microunits": 500000,
+    "agent_budget_left": 0.15,
+    "sla_rules": {
+      "max_freshness_sec": 30,
+      "format": "JSON",
+      "max_latency_sec": 3.0
+    }
+  },
+  "execution": {
+    "attempted_firewall_evaluation": true
+  },
+  "expected_outcome": {
+    "firewall_decision": "BLOCKED",
+    "block_reason": "Budget check failed: offer price ($0.50) exceeds remaining budget ($0.15)",
+    "payment_executed": false,
+    "funds_spent": 0
+  }
+}

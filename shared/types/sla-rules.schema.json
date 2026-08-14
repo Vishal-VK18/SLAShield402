@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SLARules",
+  "description": "SLA criteria specified by an AI agent before calling a paid API",
+  "type": "object",
+  "properties": {
+    "max_freshness_sec": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Maximum allowable age of response data in seconds"
+    },
+    "format": {
+      "type": "string",
+      "enum": ["JSON", "JSON_OBJECT", "JSON_ARRAY", "TEXT", "RAW"],
+      "default": "JSON",
+      "description": "Expected data format of the API response"
+    },
+    "max_latency_sec": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Maximum roundtrip response latency in seconds"
+    },
+    "required_fields": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of required top-level or nested field names in the response"
+    },
+    "min_payload_size_bytes": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Optional minimum byte size of the payload"
+    }
+  },
+  "required": ["max_freshness_sec", "format", "max_latency_sec"],
+  "additionalProperties": true
+}

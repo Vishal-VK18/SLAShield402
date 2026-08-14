@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ShieldRequest",
+  "description": "Incoming request from an AI Agent to SLAShield402 before making a payment",
+  "type": "object",
+  "properties": {
+    "payment_id": {
+      "type": "string",
+      "description": "Unique identifier for this payment request"
+    },
+    "target_api": {
+      "type": "string",
+      "description": "Target API endpoint URL to be queried"
+    },
+    "agent_wallet": {
+      "type": "string",
+      "description": "Algorand address of the AI agent requesting the payment"
+    },
+    "agent_address": {
+      "type": "string",
+      "description": "Alias for agent_wallet"
+    },
+    "provider_address": {
+      "type": "string",
+      "description": "Algorand address of the API service provider"
+    },
+    "offer_price": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "number" }
+      ],
+      "description": "Price offered for the API call (e.g. '0.02 USDC' or 0.02)"
+    },
+    "agent_budget_left": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "number" }
+      ],
+      "description": "Remaining budget of the agent (e.g. '1.00 USDC' or 1.00)"
+    },
+    "sla_rules": {
+      "$ref": "./sla-rules.schema.json"
+    }
+  },
+  "required": ["target_api", "offer_price", "agent_budget_left", "sla_rules"],
+  "additionalProperties": true
+}

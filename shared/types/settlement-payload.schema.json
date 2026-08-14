@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SettlementPayload",
+  "description": "Payload passed to Person 3's smart contract scripts (settle.py or refundAndPenalize.py)",
+  "type": "object",
+  "properties": {
+    "payment_id": {
+      "type": "string",
+      "description": "Payment ID corresponding to locked escrow on-chain"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["SETTLE", "REFUND_AND_PENALIZE"],
+      "description": "Action to be executed by the escrow smart contract"
+    },
+    "agent_address": {
+      "type": "string",
+      "description": "Algorand address of the AI agent receiving refund or providing payment"
+    },
+    "provider_address": {
+      "type": "string",
+      "description": "Algorand address of the service provider receiving settlement or being penalized"
+    },
+    "amount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Escrow amount in micro-USDC (e.g. 20000 = 0.02 USDC)"
+    },
+    "slash_amount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Bond penalty slashed from provider in micro-USDC (on SLA failure)"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Summary reason for this settlement or refund action"
+    }
+  },
+  "required": ["payment_id", "action", "agent_address", "provider_address", "amount"],
+  "additionalProperties": true
+}

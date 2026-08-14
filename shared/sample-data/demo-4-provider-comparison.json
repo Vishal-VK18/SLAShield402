@@ -1,0 +1,42 @@
+{
+  "scenario_name": "Demo 4 - Provider Comparison (Reliable Provider A vs Unreliable Provider B)",
+  "description": "Demonstrates multi-provider routing & validation comparison. Provider Alpha delivers fresh data with fast response (0.6s), while Provider Beta violates the SLA latency threshold (7.8s > 5.0s max allowed) and returns malformed payload.",
+  "sla_rules": {
+    "max_freshness_sec": 45,
+    "format": "JSON",
+    "max_latency_sec": 5.0,
+    "required_fields": ["status", "data", "timestamp"]
+  },
+  "provider_alpha": {
+    "provider_name": "WeatherGrid Alpha (High Reliability Tier)",
+    "provider_address": "PROVIDERALPHA7X7J7K7L7M7N7P7Q7R7S7T7U7V7W7X7Y7Z234567890",
+    "offer_price": 0.02,
+    "offer_price_microunits": 20000,
+    "measured_latency_sec": 0.62,
+    "response_body": {
+      "status": "OK",
+      "data": { "temperature": 27.8, "uv_index": 4.2 },
+      "timestamp": "8 seconds ago"
+    },
+    "expected_result": "PASS",
+    "expected_action": "SETTLE"
+  },
+  "provider_beta": {
+    "provider_name": "SlowFeed Beta (Unreliable Tier)",
+    "provider_address": "PROVIDERBETA9K9J9L9M9N9P9Q9R9S9T9U9V9W9X9Y9Z9A123456789",
+    "offer_price": 0.02,
+    "offer_price_microunits": 20000,
+    "measured_latency_sec": 7.85,
+    "response_body": {
+      "status": "PARTIAL",
+      "timestamp": "300 seconds ago"
+    },
+    "expected_result": "FAIL",
+    "expected_action": "REFUND_AND_PENALIZE",
+    "violations": [
+      "Latency check failed: measured latency (7.85s) exceeds max allowed (5.0s)",
+      "Freshness check failed: response data age (300s) exceeds max allowed (45s)",
+      "Format check failed: missing required field 'data'"
+    ]
+  }
+}
