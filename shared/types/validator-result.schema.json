@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ValidatorResult",
+  "description": "Output produced by Person 2's Outcome Validator and consumed by Person 3's Smart Contract triggers",
+  "type": "object",
+  "properties": {
+    "payment_id": {
+      "type": "string",
+      "description": "Unique identifier referencing the payment/request"
+    },
+    "result": {
+      "type": "string",
+      "enum": ["PASS", "FAIL"],
+      "description": "Overall SLA evaluation decision"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Human-readable summary explanation of the evaluation outcome"
+    },
+    "agent_address": {
+      "type": "string",
+      "description": "Algorand address of the AI agent"
+    },
+    "provider_address": {
+      "type": "string",
+      "description": "Algorand address of the API service provider"
+    },
+    "amount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Payment amount in USDC micro-units (e.g. 20000 for 0.02 USDC)"
+    },
+    "rule_evaluations": {
+      "type": "object",
+      "properties": {
+        "freshness": {
+          "type": "object",
+          "properties": {
+            "pass": { "type": "boolean" },
+            "actual_age_sec": { "type": "number" },
+            "max_allowed_sec": { "type": "number" },
+            "reason": { "type": "string" }
+          },
+          "required": ["pass", "reason"]
+        },
+        "format": {
+          "type": "object",
+          "properties": {
+            "pass": { "type": "boolean" },
+            "detected_format": { "type": "string" },
+            "expected_format": { "type": "string" },
+            "missing_fields": { "type": "array", "items": { "type": "string" } },
+            "reason": { "type": "string" }
+          },
+          "required": ["pass", "reason"]
+        },
+        "latency": {
+          "type": "object",
+          "properties": {
+            "pass": { "type": "boolean" },
+            "actual_latency_sec": { "type": "number" },
+            "max_allowed_sec": { "type": "number" },
+            "reason": { "type": "string" }
+          },
+          "required": ["pass", "reason"]
+        }
+      },
+      "additionalProperties": true
+    },
+    "evaluated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO timestamp when the evaluation took place"
+    }
+  },
+  "required": ["payment_id", "result", "reason", "agent_address", "provider_address", "amount"],
+  "additionalProperties": true
+}

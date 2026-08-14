@@ -1,0 +1,26 @@
+{
+  "name": "person-2-sla-validator",
+  "version": "1.0.0",
+  "description": "SLAShield402 - Person 2 SLA Rules & Outcome Validator Module",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "test": "tsx tests/validateOutcome.test.ts",
+    "test:all": "tsx tests/freshnessRule.test.ts && tsx tests/formatRule.test.ts && tsx tests/latencyRule.test.ts && tsx tests/validateOutcome.test.ts",
+    "demo": "tsx src/demo/runDemoScenarios.ts"
+  },
+  "keywords": [
+    "slashield402",
+    "sla-validator",
+    "x402",
+    "algorand"
+  ],
+  "author": "Person 2 (SLAShield402 Team)",
+  "license": "ISC",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  }
+}

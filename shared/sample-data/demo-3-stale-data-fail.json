@@ -1,0 +1,40 @@
+{
+  "scenario_name": "Demo 3 - Stale Data Violation (SLA Fail -> Automatic Refund & Slashing)",
+  "description": "AI Agent pays for real-time crypto price feed with a 60s freshness requirement. The provider responds in 1.1s but returns 4-hour old (14,400s) cached data. SLA is violated, triggering contract refund and provider bond slashing.",
+  "request": {
+    "payment_id": "REQ-2026-DEMO-003",
+    "target_api": "https://api.crypto-oracle-beta.algo/v1/ticker/ALGO-USDC",
+    "agent_address": "YVEHNV3EWF4GULZHABH64QKOYLE5MO2MSBAAK7O76A2ESACA5OV2AZSOKQ",
+    "provider_address": "STALEPROVIDER8888888888888888888888888888888888888888888888",
+    "offer_price": 0.02,
+    "offer_price_microunits": 20000,
+    "agent_budget_left": 1.00,
+    "sla_rules": {
+      "max_freshness_sec": 60,
+      "format": "JSON",
+      "max_latency_sec": 5.0,
+      "required_fields": ["symbol", "price", "timestamp"]
+    }
+  },
+  "execution": {
+    "measured_latency_sec": 1.12,
+    "response_headers": {
+      "content-type": "application/json",
+      "cache-control": "public, max-age=14400"
+    },
+    "response_body": {
+      "symbol": "ALGO-USDC",
+      "price": 0.2854,
+      "timestamp": "4 hours ago",
+      "provider_tx_ref": "ALGO_TX_STALE_33211"
+    }
+  },
+  "expected_outcome": {
+    "firewall_decision": "APPROVE",
+    "validator_result": "FAIL",
+    "violation_reason": "Freshness check failed: response data age (14400s) exceeds maximum allowed freshness (60s)",
+    "contract_action": "REFUND_AND_PENALIZE",
+    "refund_amount": 20000,
+    "penalty_slashed": 2000
+  }
+}

@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "test": "tsx src/tests/firewall.test.ts"
+    "test": "tsx src/tests/firewall.test.ts",
+    "test:person-2": "tsx person-2-sla-validator/tests/validateOutcome.test.ts",
+    "demo": "tsx person-2-sla-validator/src/demo/runDemoScenarios.ts"
   },
   "keywords": [],
   "author": "",
