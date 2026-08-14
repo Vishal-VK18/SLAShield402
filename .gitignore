@@ -1,0 +1,72 @@
+### ---------- Node.js / TypeScript (Person 1 & 2) ---------- ###
+node_modules/
+dist/
+build/
+out/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.pnpm-store/
+.eslintcache
+
+### ---------- Environment & secrets ---------- ###
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+*.pem
+*.key
+secrets/
+wallet.json
+*mnemonic*
+*private-key*
+
+### ---------- Python / Algorand smart contract (Person 3) ---------- ###
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+
+### ---------- AlgoKit / Algorand specific ---------- ###
+.algokit/
+.algokit-cache/
+artifacts/
+.puya/
+*.teal.map
+.deploy_env
+
+### ---------- Editor / OS ---------- ###
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+### ---------- Logs & temp ---------- ###
+*.log
+logs/
+tmp/
+temp/
+*.tmp
+
+### ---------- Testing / coverage ---------- ###
+coverage/
+.nyc_output/
+
+### ---------- Misc build artifacts ---------- ###
+*.tsbuildinfo
+.cache/
+.turbo/
+.vercel/
+.next/
