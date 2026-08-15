@@ -157,5 +157,5 @@ slashield402/
 ├── person-1-firewall-api/           # 👤 Person 1: Firewall API & x402 Gateway (Hono + WebSocket)
 ├── person-2-sla-validator/          # 👤 Person 2: SLA Rules Engine & Demo Runner
 ├── person-3-algorand-contract/      # 👤 Person 3: Algorand Escrow & Slashing Contract (PyTeal)
-└── dashboard/                       # 🖥️ Real-Time Apple Design Web Console (React + Vite)
+└── dashboard/                   
 ```
