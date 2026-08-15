@@ -1,4 +1,4 @@
-import { runFirewall } from '../firewall/runFirewall.js';
+import { runFirewall } from '../src/firewall/runFirewall.js';
 
 console.log('--- TEST 1: Valid Request ---');
 console.log(runFirewall({ offerPrice: 0.02, budgetLeft: 1.00, providerAddress: '0xValidProvider' }));

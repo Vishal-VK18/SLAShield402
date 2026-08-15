@@ -243,6 +243,26 @@ def approval_program() -> Expr:
         Return(Int(1)),
     )
 
+    # --- 6. Opt In Application Account to ASA ---
+    # Application Args: ["opt_in_asset", asa_id]
+    opt_in_asa_id = Btoi(Txn.application_args[1]) if Txn.application_args.length() > Int(1) else Int(0)
+    opt_in_asset = Seq(
+        Assert(Txn.application_args.length() >= Int(2)),
+        Assert(Txn.sender() == App.globalGet(KEY_AUTHORIZED_BACKEND)),
+        Assert(opt_in_asa_id > Int(0)),
+        InnerTxnBuilder.Begin(),
+        InnerTxnBuilder.SetFields(
+            {
+                TxnField.type_enum: TxnType.AssetTransfer,
+                TxnField.xfer_asset: opt_in_asa_id,
+                TxnField.asset_amount: Int(0),
+                TxnField.asset_receiver: Global.current_application_address(),
+            }
+        ),
+        InnerTxnBuilder.Submit(),
+        Return(Int(1)),
+    )
+
     # Route based on Application Call ApplicationArgs[0]
     method_select = Txn.application_args[0]
     return Cond(
@@ -255,6 +275,7 @@ def approval_program() -> Expr:
         [method_select == Bytes("create_payment"), create_payment],
         [method_select == Bytes("approve_and_settle"), approve_and_settle],
         [method_select == Bytes("fail_and_refund"), fail_and_refund],
+        [method_select == Bytes("opt_in_asset"), opt_in_asset],
     )
 
 
