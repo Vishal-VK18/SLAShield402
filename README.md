@@ -12,17 +12,28 @@ Using the **x402 payment protocol** on **Algorand Testnet**, SLAShield402 enforc
 
 ## How It Works
 
-```txt
-[AI Agent] ──1. POST /shield/check (Unpaid)──> [SLAShield402 Gateway]
-   ▲                                                    │
-   │ ◄──2. HTTP 402 + USDC Challenge────────────────────┘
-   │
-   ├──3. Sign USDC ASA Tx + Retry with X-Payment-Proof──> [Spend Policy Gate]
-                                                                │
-                                              4. Outgoing Call  │ (if Approved)
-                                                                ▼
-[Algorand Escrow Contract] ◄──6. Settle or Refund── [SLA Validator] ◄──5. Upstream Data── [Target API]
-   (App ID #769236555)                               (Freshness, Format, Latency)
+```mermaid
+sequenceDiagram
+    participant Agent as AI Agent / Client
+    participant Shield as SLAShield402 (Person 1)
+    participant Indexer as Algorand Indexer (verification)
+    participant SLA as SLA Validator (Person 2)
+    participant Contract as Escrow Contract (Person 3, App #769236555)
+    participant Target as Target API (simulated)
+
+    Agent->>Shield: 1. POST /shield/check
+    Shield-->>Agent: 2. 402 Payment Required (price, CAIP-2, ASA 10458941)
+    Note over Agent: 3. sign USDC ASA transfer (axfer)
+    Agent->>Shield: 4. retry with X-Payment-Proof
+    Shield->>Indexer: 5. verify tx on-chain
+    Indexer-->>Shield: confirmed round
+    Shield->>Target: 6. outgoing x402 call (simulated target)
+    Target-->>Shield: response data
+    Shield->>SLA: 7. validate outcome (freshness/format/latency)
+    SLA-->>Shield: PASS or FAIL
+    Shield->>Contract: 8. spawn subprocess (settle.py / refundAndPenalize.py)
+    Contract-->>Shield: settlement/refund tx id
+    Shield-->>Agent: 9. 200 OK + shield_fee_tx + settlement_tx_id
 ```
 
 1. **Pre-flight Firewall Gate:** Evaluates agent budget caps and provider authorization before funds leave the wallet.
@@ -37,20 +48,52 @@ Using the **x402 payment protocol** on **Algorand Testnet**, SLAShield402 enforc
 
 ## Architecture
 
-See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for detailed sequence flows and component specifications.
-
 ```mermaid
 flowchart LR
-    Agent["Autonomous AI Agent<br/>(Client)"] -->|1. Request| Gateway["SLAShield402<br/>Gateway (:3000)"]
-    Gateway -->|2. 402 Challenge| Agent
-    Agent -->|3. Sign & Retry| Gateway
-    Gateway -->|4. Inspect Budget| Firewall["Pre-Flight Firewall"]
-    Firewall -->|5. Forward Call| TargetAPI["Target Oracle/API"]
-    TargetAPI -->|6. Raw Response| Validator["SLA Outcome Validator"]
-    Validator -->|7a. PASS: Settle| Escrow["Algorand Escrow Contract<br/>(App #769236555)"]
-    Validator -->|7b. FAIL: Refund + Slash| Escrow
-    Escrow -->|8. Receipts & Tx IDs| Agent
+    Client["AI Agent / Client"]
+    Server["SLAShield402<br/>Firewall + x402 Gateway"]
+    Indexer["Algorand Indexer<br/>(verification)"]
+    SLA["SLA Validator<br/>(Person 2)"]
+    Contract["Escrow Smart Contract<br/>App #769236555"]
+    Dashboard["Real-Time Dashboard<br/>(WebSocket, observability)"]
+
+    Client -->|1. request| Server
+    Server -->|2. 402 + price| Client
+    Client -->|3. sign + retry USDC| Server
+    Server -->|4. verify| Indexer
+    Server -->|5. validate| SLA
+    Server -->|6. settle/refund| Contract
+    Contract -->|7. tx id| Server
+    Server -->|8. 200 + receipt| Client
+    Server -.->|live events| Dashboard
 ```
+
+See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for full component specifications, state machine models, and sequence traces.
+
+---
+
+## What's Real vs. What's Simulated
+
+- **Real:**
+  - `402 Payment Required` challenge with official CAIP-2 network identifier (`algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=`).
+  - Client-side dynamic signing and broadcasting of fresh Algorand USDC ASA transfers (`#10458941`) on Testnet.
+  - On-chain fee verification and round confirmation via Algonode Testnet Indexer.
+  - Session replay attack rejection returning `HTTP 403`.
+  - Real Python subprocess invocations executing PyTeal smart contract transactions on Algorand Testnet (`App ID #769236555`).
+  - Verified on-chain inner transaction payouts and provider bond slash deductions visible on Pera Explorer.
+  - Live WebSocket telemetry stream feeding the React dashboard.
+- **Simulated:**
+  - Target weather/market oracle endpoints are mocked with deterministic timestamps and latency profiles to reliably demonstrate SLA pass vs. stale SLA fail conditions.
+
+---
+
+## Pricing
+
+| Endpoint / Action | Price | Description |
+|---|---|---|
+| `POST /shield/check` | 0.001 USDC | Pre-flight firewall inspection, SLA verification & escrow guarantee fee |
+| `GET /api/discovery` | Free ($0.00) | Public Bazaar discovery catalog metadata for agent crawlers |
+| `GET /api/events/recent` | Free ($0.00) | Recent execution events and telemetry backlog |
 
 ---
 
@@ -75,6 +118,7 @@ flowchart LR
 git clone https://github.com/Vishal-VK18/SLAShield402.git
 cd SLAShield402
 npm install
+npm --prefix dashboard install
 pip install -r person-3-algorand-contract/requirements.txt
 ```
 
@@ -101,16 +145,6 @@ npm run dev:full
 ```bash
 npm run demo
 ```
-
----
-
-## Pricing
-
-| Endpoint / Action | Price | Description |
-|---|---|---|
-| `POST /shield/check` | 0.001 USDC | Pre-flight firewall inspection, SLA verification & escrow guarantee fee |
-| `GET /api/discovery` | Free ($0.00) | Public Bazaar discovery catalog metadata for agent crawlers |
-| `GET /api/events/recent` | Free ($0.00) | Recent execution events and telemetry backlog |
 
 ---
 
