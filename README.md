@@ -12,6 +12,8 @@ Using the **x402 payment protocol** on **Algorand Testnet**, SLAShield402 enforc
 
 ## How It Works
 
+![SLAShield402 x402 Sequence Flow](./docs/assets/sequence_diagram.png)
+
 ```mermaid
 sequenceDiagram
     participant Agent as AI Agent / Client
@@ -47,6 +49,8 @@ sequenceDiagram
 ---
 
 ## Architecture
+
+![SLAShield402 System Architecture Flowchart](./docs/assets/architecture_flowchart.png)
 
 ```mermaid
 flowchart LR
