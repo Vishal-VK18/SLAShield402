@@ -159,9 +159,10 @@ export async function runDemo(): Promise<void> {
   };
   console.log(`  ${C.dim}Response Body:${C.reset} ${JSON.stringify(responseData1)}`);
 
+  const paymentId1 = `REQ-PASS-${Date.now()}`;
   console.log(`\n[Step 2] Running Outcome Validator (Person 2):`);
   const valResult1 = validateOutcome({
-    payment_id: 'REQ-LIVE-PASS-001',
+    payment_id: paymentId1,
     agent_address: payload1.provider_address,
     provider_address: payload1.provider_address,
     amount: 20000,
@@ -175,7 +176,7 @@ export async function runDemo(): Promise<void> {
   console.log(`  Outcome: ${C.green + C.bright}★ PASS ★${C.reset} (${valResult1.reason})`);
 
   console.log(`\n[Step 3] Spawning Real Subprocess to Settle Contract (Person 3):`);
-  const settleOut = runSmartContractSubprocess('settle.py', ['--payment_id', 'REQ-LIVE-PASS-001', '--amount', '20000']);
+  const settleOut = runSmartContractSubprocess('settle.py', ['--payment_id', paymentId1, '--amount', '20000']);
   console.log(C.dim + settleOut.trim().split('\n').slice(-5).join('\n') + C.reset);
   
   // Extract and print dynamically generated Explorer URL
@@ -230,9 +231,10 @@ export async function runDemo(): Promise<void> {
     timestamp: new Date(Date.now() - 14400000).toISOString(),
   };
 
+  const paymentId3 = `REQ-FAIL-${Date.now()}`;
   console.log(`\n[Step 2] Running Outcome Validator on Stale 4-hour old response:`);
   const valResult3 = validateOutcome({
-    payment_id: 'REQ-LIVE-FAIL-001',
+    payment_id: paymentId3,
     agent_address: payload3.provider_address,
     provider_address: payload3.provider_address,
     amount: 20000,
@@ -245,7 +247,7 @@ export async function runDemo(): Promise<void> {
   console.log(`  Outcome: ${C.red + C.bright}★ FAIL (SLA VIOLATED) ★${C.reset}`);
 
   console.log(`\n[Step 3] Spawning Real Subprocess to Refund Agent & Slash Provider Bond (Person 3):`);
-  const refundOut = runSmartContractSubprocess('refundAndPenalize.py', ['--payment_id', 'REQ-LIVE-FAIL-001', '--amount', '20000', '--reason', 'Stale data age 14400s > 60s']);
+  const refundOut = runSmartContractSubprocess('refundAndPenalize.py', ['--payment_id', paymentId3, '--amount', '20000', '--reason', 'Stale data age 14400s > 60s']);
   console.log(C.dim + refundOut.trim().split('\n').slice(-5).join('\n') + C.reset);
   
   // Extract and print dynamically generated Explorer URL
