@@ -2,8 +2,6 @@
 
 > Autonomous x402 AI Payment Firewall, Real-Time SLA Validator & Conditional Algorand Smart Contract Escrow Layer.
 
-![SLAShield402 Real-Time Dashboard Preview](./docs/assets/dashboard_preview.png)
-
 ## What is this?
 
 **SLAShield402** is an agentic payment infrastructure gateway that sits between autonomous AI agents and paid external APIs. It solves two critical production risks in agentic commerce: **wallet depletion from unexpected price spikes**, and **financial loss from paying upfront for stale, malformed, or slow API responses**.
