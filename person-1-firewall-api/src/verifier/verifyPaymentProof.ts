@@ -6,6 +6,9 @@
 
 const INDEXER_URL = process.env.INDEXER_SERVER || 'https://testnet-idx.algonode.cloud';
 
+// In-memory set tracking transaction hashes consumed during the current server session
+const consumedTxIds = new Set<string>();
+
 export interface VerificationResult {
   valid: boolean;
   txId?: string;
@@ -16,7 +19,19 @@ export interface VerificationResult {
 }
 
 /**
+ * Helper to reset or check consumed transaction IDs (useful for tests)
+ */
+export function resetConsumedPayments(): void {
+  consumedTxIds.clear();
+}
+
+export function isPaymentConsumed(txId: string): boolean {
+  return consumedTxIds.has(txId.trim());
+}
+
+/**
  * Validates a transaction ID against the Algorand Testnet Indexer.
+ * Includes in-memory replay guard for the current server session.
  */
 export async function verifyTransactionOnChain(txId: string): Promise<VerificationResult> {
   if (!txId || typeof txId !== 'string') {
@@ -28,6 +43,15 @@ export async function verifyTransactionOnChain(txId: string): Promise<Verificati
   // Basic Algorand 52-char base32 regex check
   if (!/^[A-Z2-7]{52}$/i.test(cleanTxId)) {
     return { valid: false, txId: cleanTxId, reason: `Transaction ID '${cleanTxId}' is not a valid 52-character base32 Algorand transaction hash.` };
+  }
+
+  // 1. Session Replay Check
+  if (consumedTxIds.has(cleanTxId)) {
+    return {
+      valid: false,
+      txId: cleanTxId,
+      reason: `Payment proof replay rejected: Transaction '${cleanTxId}' has already been consumed in this server session.`,
+    };
   }
 
   try {
@@ -55,6 +79,9 @@ export async function verifyTransactionOnChain(txId: string): Promise<Verificati
     if (!confirmedRound || confirmedRound <= 0) {
       return { valid: false, txId: cleanTxId, reason: `Transaction '${cleanTxId}' is not yet confirmed on-chain.` };
     }
+
+    // Mark transaction as consumed in this session
+    consumedTxIds.add(cleanTxId);
 
     return {
       valid: true,

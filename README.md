@@ -1,161 +1,139 @@
 # SLAShield402
 
-> A safety checkpoint for every payment an AI agent makes. Built on Algorand & x402.
+> Autonomous x402 AI Payment Firewall, Real-Time SLA Validator & Conditional Algorand Smart Contract Escrow Layer.
 
-SLAShield402 sits between an AI agent and any paid API. Before an agent spends funds, the **Firewall** verifies the price, enforces budget limits, and evaluates provider trust. The system then intercepts the call via **x402**, validates that the API response satisfies promised **SLA conditions** (freshness, schema/format, latency), and automatically executes on-chain settlement on **Algorand** (releasing funds to the provider on `PASS`, or issuing instant refunds and provider bond penalties on `FAIL`).
+## What is this?
+
+**SLAShield402** is an agentic payment infrastructure gateway that sits between autonomous AI agents and paid external APIs. It solves two critical production risks in agentic commerce: **wallet depletion from unexpected price spikes**, and **financial loss from paying upfront for stale, malformed, or slow API responses**.
+
+Using the **x402 payment protocol** on **Algorand Testnet**, SLAShield402 enforces pre-flight spend policy limits, measures real-time response SLAs (Freshness, Format, Latency), and coordinates conditional smart contract escrow settlements with automated 10% provider bond slashing when quality guarantees are broken.
 
 ---
 
-## 🏗️ Architecture & Real-Time Event Stream
+## How It Works
 
+```txt
+[AI Agent] ──1. POST /shield/check (Unpaid)──> [SLAShield402 Gateway]
+   ▲                                                    │
+   │ ◄──2. HTTP 402 + USDC Challenge────────────────────┘
+   │
+   ├──3. Sign USDC ASA Tx + Retry with X-Payment-Proof──> [Spend Policy Gate]
+                                                                │
+                                              4. Outgoing Call  │ (if Approved)
+                                                                ▼
+[Algorand Escrow Contract] ◄──6. Settle or Refund── [SLA Validator] ◄──5. Upstream Data── [Target API]
+   (App ID #769236555)                               (Freshness, Format, Latency)
 ```
-                          ┌────────────────────────┐
-                          │   AI Agent / Client    │
-                          └───────────┬────────────┘
-                                      │ (1) Request + x402 402 Challenge/Proof
-                                      ▼
-                      ┌────────────────────────────────┐
-                      │  Person 1: Firewall API        │
-                      │  - x402 HTTP 402 Challenge     │
-                      │  - On-Chain Proof Verification │
-                      │  - Budget & Price Anomaly Check│
-                      │  - Provider Blocklist Check    │
-                      └───────────────┬────────────────┘
-                                      │ (2) Outgoing x402 Payment
-                                      ▼
-                      ┌────────────────────────────────┐
-                      │       Target Paid API          │
-                      └───────────────┬────────────────┘
-                                      │ (3) Raw Response Data
-                                      ▼
-                      ┌────────────────────────────────┐
-                      │  Person 2: SLA Validator       │
-                      │  - Freshness (Age Delta) Check │
-                      │  - Schema & Format Validation  │
-                      │  - Roundtrip Latency Timing    │
-                      └───────────────┬────────────────┘
-                                      │ (4) PASS / FAIL Outcome
-                                      ▼
-                      ┌────────────────────────────────┐
-                      │  Person 3: Algorand Contract   │
-                      │  - PASS ➔ SETTLE to Provider   │
-                      │  - FAIL ➔ REFUND + Bond Slash  │
-                      └────────────────────────────────┘
-                                      │
-                                      ▼
-                      ┌────────────────────────────────┐
-                      │  Live WebSocket Event Stream   │
-                      │  ws://localhost:3000/ws        │
-                      │  - request_received            │
-                      │  - challenge_issued (HTTP 402) │
-                      │  - payment_verified            │
-                      │  - firewall_decision           │
-                      │  - target_api_response         │
-                      │  - sla_decision                │
-                      │  - settlement_result           │
-                      └────────────────────────────────┘
+
+1. **Pre-flight Firewall Gate:** Evaluates agent budget caps and provider authorization before funds leave the wallet.
+2. **x402 Challenge & Client Signing:** Returns `HTTP 402 Payment Required`; client dynamically signs and broadcasts a fresh USDC ASA payment on Algorand Testnet.
+3. **Outgoing API Execution & Timing:** Executes upstream call and records sub-second roundtrip network latency.
+4. **Real-Time SLA Validation:** Evaluates response JSON syntax, data timestamp freshness ($\le 60$s), and latency thresholds ($\le 5$s).
+5. **Conditional Escrow Settlement & Slashing:**
+   - **SLA PASS:** Smart contract triggers `approve_and_settle`, releasing payment to the provider.
+   - **SLA FAIL:** Smart contract triggers `fail_and_refund`, instantly refunding the agent and slashing the provider's bonded stake by 10%.
+
+---
+
+## Architecture
+
+See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for detailed sequence flows and component specifications.
+
+```mermaid
+flowchart LR
+    Agent["Autonomous AI Agent<br/>(Client)"] -->|1. Request| Gateway["SLAShield402<br/>Gateway (:3000)"]
+    Gateway -->|2. 402 Challenge| Agent
+    Agent -->|3. Sign & Retry| Gateway
+    Gateway -->|4. Inspect Budget| Firewall["Pre-Flight Firewall"]
+    Firewall -->|5. Forward Call| TargetAPI["Target Oracle/API"]
+    TargetAPI -->|6. Raw Response| Validator["SLA Outcome Validator"]
+    Validator -->|7a. PASS: Settle| Escrow["Algorand Escrow Contract<br/>(App #769236555)"]
+    Validator -->|7b. FAIL: Refund + Slash| Escrow
+    Escrow -->|8. Receipts & Tx IDs| Agent
 ```
 
 ---
 
-## 🌟 Live Algorand Testnet Deployment Proofs
+## Tech Stack
 
-| Item | Details | Live Pera Explorer Link |
-| :--- | :--- | :--- |
-| **Smart Contract App ID** | `769236555` | [View Application #769236555](https://testnet.explorer.perawallet.app/application/769236555/) |
-| **Contract App Address** | `4IXAMX45CUWKRHQEGUMAIHT45ABGOMO2LK6P5V2BHHLXNCOMSYDOJNCUXA` | [View Contract Address](https://testnet.explorer.perawallet.app/address/4IXAMX45CUWKRHQEGUMAIHT45ABGOMO2LK6P5V2BHHLXNCOMSYDOJNCUXA/) |
-| **Contract Deployment Tx** | `IKEQATEBSHETIEHTUKVG33PIUEY7BZY2Q5RY6NLSIA252AFSIBJQ` | [View Deployment Tx](https://testnet.explorer.perawallet.app/tx/IKEQATEBSHETIEHTUKVG33PIUEY7BZY2Q5RY6NLSIA252AFSIBJQ/) |
-| **Provider Bond Stake Tx** | `RPZFMYQTZ2RKWPTXNGQP53DWJ4ATX5H5MHGCWSFATQU4NCEG65FQ` | [View Bond Stake Tx](https://testnet.explorer.perawallet.app/tx/RPZFMYQTZ2RKWPTXNGQP53DWJ4ATX5H5MHGCWSFATQU4NCEG65FQ/) |
-| **Official USDC Asset ID** | `10458941` *(Circle Testnet USDC)* | [View USDC ASA](https://testnet.explorer.perawallet.app/asset/10458941/) |
+| Layer | Technology | Role |
+|---|---|---|
+| **Payment Protocol** | `x402` (`exact` scheme, USDC on Algorand Testnet) | Standardized HTTP 402 negotiation and client headers |
+| **Client Signer** | `@x402/fetch` / `algosdk` (`v3.2.0`) | Dynamic client-side USDC ASA transaction construction and signing |
+| **Resource Gateway** | `@x402/hono` / `@x402/avm` (`v2.19.0`) | High-performance HTTP server with CAIP-2 network verification |
+| **Discovery Extension** | `@x402-avm/extensions` (`v2.6.1`) | Exposes machine-readable Bazaar metadata on `GET /api/discovery` |
+| **Smart Contract Escrow** | PyTeal / Algorand AVM (`App ID #769236555`) | Conditional escrow settlement and provider bond slashing logic |
+| **Facilitator Choice** | **Custom Two-Phase Escrow vs. GoPlausible Facilitator** | *Architectural Rationale:* Hosted facilitators (like GoPlausible) execute immediate `/settle` upfront before data is delivered. SLAShield402 routes through a two-phase smart contract escrow to enable post-response SLA validation and bond penalties. |
+| **Frontend Dashboard** | React / Vite / TailwindCSS / Lucide Icons | Apple-style real-time telemetry dashboard with WebSocket streaming |
 
 ---
 
-## 🚀 How to Run
+## Setup & Running Locally
 
-### 1. Install Dependencies
+### 1. Clone & Install Dependencies
 ```bash
-# Install Node dependencies (Root, Person 1, Person 2, and Dashboard)
+git clone https://github.com/Vishal-VK18/SLAShield402.git
+cd SLAShield402
 npm install
-npm --prefix dashboard install
-
-# Install Python dependencies (Person 3 Algorand Contract)
-cd person-3-algorand-contract
-pip install pyteal py-algorand-sdk algokit-utils pytest python-dotenv
-cd ..
+pip install -r person-3-algorand-contract/requirements.txt
 ```
 
-### 2. Environment Setup
-Copy template configuration files:
+### 2. Configure Environment
 ```bash
 cp .env.example .env
-cp person-1-firewall-api/.env.example person-1-firewall-api/.env
-cp person-3-algorand-contract/.env.example person-3-algorand-contract/.env
+# Ensure DEPLOYER_MNEMONIC, ALGOD_SERVER, and APP_ID (769236555) are set
 ```
 
-### 3. Start the Full System (Firewall API + Real-Time Live Dashboard)
-The primary way to run and demo SLAShield402 is with a single command:
+### 3. Fund Testnet Wallet & Opt In
+1. Fund with Testnet ALGO: [Lora Dispenser](https://lora.algokit.io/testnet/fund)
+2. Opt in to USDC ASA ID `10458941`:
 ```bash
+python person-3-algorand-contract/scripts/optInUsdc.py
+```
+
+### 4. Run the Full Stack
+```bash
+# Starts both Firewall Gateway (:3000) and Real-Time Dashboard (:5173)
 npm run dev:full
 ```
-This concurrently starts:
-- **Firewall Server & WebSocket Bus**: `http://localhost:3000` (`ws://localhost:3000/ws`)
-- **Apple Design Live Dashboard**: `http://localhost:5173/`
 
-Open `http://localhost:5173/` in your browser. From the dashboard, you can trigger real test requests, observe the 402 challenge/retry flow in the live stream, and click directly through to verified on-chain explorer links.
-
-### 4. Alternative: CLI Demo Runner
-If you prefer running scenarios strictly in terminal:
+### 5. Run the Automated Live Demo
 ```bash
-# Start server in Terminal 1
-npm run dev
-
-# Run all 4 CLI demo scenarios in Terminal 2
 npm run demo
 ```
 
-### 5. Run Unit & Component Test Suites
-```bash
-# Person 1 Firewall Tests
-npm test
+---
 
-# Person 2 SLA Validator Tests
-npm run test:person-2
+## Pricing
 
-# Person 3 Algorand Smart Contract Tests (10/10)
-cd person-3-algorand-contract
-$env:PYTHONPATH="."; py -3.12 -m pytest tests/ -v
-cd ..
-```
+| Endpoint / Action | Price | Description |
+|---|---|---|
+| `POST /shield/check` | 0.001 USDC | Pre-flight firewall inspection, SLA verification & escrow guarantee fee |
+| `GET /api/discovery` | Free ($0.00) | Public Bazaar discovery catalog metadata for agent crawlers |
+| `GET /api/events/recent` | Free ($0.00) | Recent execution events and telemetry backlog |
 
 ---
 
-## 🎯 4 Canonical Demo Scenarios
+## Live On-Chain Proofs (Algorand Testnet)
 
-1. **Scenario 1 (Normal Success)**: Agent requests weather data $\rightarrow$ Firewall issues `402`, client attaches verified on-chain proof $\rightarrow$ API returns fresh data $\rightarrow$ SLA `PASS` $\rightarrow$ Algorand contract executes `SETTLE` to provider.
-2. **Scenario 2 (Price Spike / Budget Exceeded)**: Quote exceeds agent's budget ($0.50 > $0.15) $\rightarrow$ Firewall returns `HTTP 400 BLOCKED` $\rightarrow$ Zero target funds spent.
-3. **Scenario 3 (Stale Data SLA Violation)**: Payment executes $\rightarrow$ API returns 4-hour old stale cache $\rightarrow$ SLA `FAIL` $\rightarrow$ Algorand contract executes `REFUND_AND_PENALIZE` (Agent refunded + Provider bond slashed 10%).
-4. **Scenario 4 (Multi-Provider Benchmark)**: Comparative evaluation between high-reliability Provider Alpha (`PASS`) and degraded Provider Beta (`FAIL`).
-
----
-
-## ⚠️ Known Limitations & Design Decisions
-
-1. **On-Chain Payment Proof Verification vs Facilitator:**
-   The hackathon specification references `https://facilitator.goplausible.xyz` as the intended payment facilitator. Our implementation issues x402-compliant `402 Payment Required` challenge headers and verifies payment proofs directly against the **Algorand Testnet Indexer API** (`https://testnet-idx.algonode.cloud/v2/transactions/${txId}`) to confirm that the transaction exists and is confirmed in a valid round on-chain. This provides direct decentralized verification while maintaining full architectural compatibility with GoPlausible facilitator endpoints.
-2. **Payment Proof Replay Protection:**
-   The firewall validates that any submitted `X-Payment-Proof` transaction hash exists and is confirmed on Algorand Testnet. For this MVP hackathon scope, the server does not maintain an on-disk database of consumed nonces/hashes, meaning a previously confirmed transaction hash can be submitted multiple times. Production deployment would store spent transaction IDs in Redis/Postgres with expiry TTLs.
-3. **Shared Test Wallet for Demo Roles:**
-   For local hackathon testing, the `DEFAULT_AGENT_ADDR` and `DEFAULT_PROVIDER_ADDR` default to the same funded testnet wallet (`YVEHNV3E...`) to ensure all smart contract inner transactions succeed without failing minimum balance constraints. Distinct addresses are fully supported via the `--agent` and `--provider` CLI flags.
+| Flow | Transaction ID | Confirmation Round | Pera Explorer Link |
+|---|---|:---:|---|
+| **Fresh USDC ASA Client Sign** | `7DDDB4OSEYWCLBKZV23BXVUQTEBSSLIE2EALXJARQAUQ2QJCFAOQ` | 66487818 | [View Tx](https://testnet.explorer.perawallet.app/tx/7DDDB4OSEYWCLBKZV23BXVUQTEBSSLIE2EALXJARQAUQ2QJCFAOQ/) |
+| **Scenario 1: SLA Pass Settlement** | `DWR5KCQPJMCTRNFKRJNKZE7VD6HK5YMRI2RCKAUWNMGONDVHZUTA` | 66487820 | [View Tx](https://testnet.explorer.perawallet.app/tx/DWR5KCQPJMCTRNFKRJNKZE7VD6HK5YMRI2RCKAUWNMGONDVHZUTA/) |
+| **Scenario 3: Refund & Bond Slash** | `KXZXOGNHT7BGUOH6JPFVFULVIOD7H6AGGVYKIVRSIWORYDSMSE4Q` | 66487823 | [View Tx](https://testnet.explorer.perawallet.app/tx/KXZXOGNHT7BGUOH6JPFVFULVIOD7H6AGGVYKIVRSIWORYDSMSE4Q/) |
 
 ---
 
-## 👥 Team Directory Structure
+## What's Next (Mainnet Readiness)
 
-```
-slashield402/
-├── shared/                          # 🔗 Shared JSON Schemas & Reference Payloads
-├── person-1-firewall-api/           # 👤 Person 1: Firewall API & x402 Gateway (Hono + WebSocket)
-├── person-2-sla-validator/          # 👤 Person 2: SLA Rules Engine & Demo Runner
-├── person-3-algorand-contract/      # 👤 Person 3: Algorand Escrow & Slashing Contract (PyTeal)
-└── dashboard/                   
-```
+To transition from Algorand Testnet to Mainnet:
+1. Switch CAIP-2 network identifier to Mainnet (`algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=`).
+2. Update USDC Asset ID to Mainnet (`31566704`).
+3. Transition client signing from `.env` mnemonic to a secure HSM or Web3 Agent Key Management Service (e.g. Turnkey/Privy).
+4. Persist consumed transaction nonces in Redis with TTLs for distributed replay protection.
+
+---
+
+## Team
+
+- **Vishal D & Team SLAShield402** — Web3 & AI Agents Engineers.

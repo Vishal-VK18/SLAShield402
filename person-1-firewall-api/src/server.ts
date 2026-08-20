@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { shieldCheckRoute } from './routes/shieldCheck.js';
+import { slashieldX402Config } from './x402/config.js';
 
 export const app = new Hono();
 
@@ -14,6 +15,11 @@ app.use('*', cors({
 // Mount API routes
 app.route('/', shieldCheckRoute);
 
+// Discovery metadata endpoint (x402 Bazaar compatible)
+app.get('/api/discovery', (c) => {
+  return c.json(slashieldX402Config);
+});
+
 // Root health & metadata endpoint
 app.get('/', (c) => {
   return c.json({
@@ -24,6 +30,7 @@ app.get('/', (c) => {
     status: 'ONLINE',
     endpoints: {
       check: 'POST /shield/check',
+      discovery: 'GET /api/discovery',
       events: 'GET /api/events/recent',
       ws: 'ws://localhost:3000/ws',
     },

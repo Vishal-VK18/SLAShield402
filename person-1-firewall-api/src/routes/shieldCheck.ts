@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { execSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ALGORAND_TESTNET_CAIP2, USDC_TESTNET_ASA_ID } from '@x402/avm';
 import { runFirewall } from '../firewall/runFirewall.js';
 import { payTargetApi } from '../client/payTargetApi.js';
 import { verifyTransactionOnChain } from '../verifier/verifyPaymentProof.js';
@@ -16,7 +17,7 @@ export const shieldCheckRoute = new Hono();
 
 const DEFAULT_RECIPIENT = process.env.SLASHIELD_RECIPIENT_ADDRESS || 'YVEHNV3EWF4GULZHABH64QKOYLE5MO2MSBAAK7O76A2ESACA5OV2AZSOKQ';
 const FACILITATOR_URL = process.env.FACILITATOR_URL || 'https://facilitator.goplausible.xyz';
-const USDC_ASA_ID = Number(process.env.USDC_ASA_ID || 10458941);
+const USDC_ASA_ID = Number(process.env.USDC_ASA_ID) || USDC_TESTNET_ASA_ID;
 const ESCROW_APP_ID = Number(process.env.SLASHIELD_ESCROW_APP_ID || 769236555);
 const SHIELD_FEE_MICRO_USDC = Number(process.env.SHIELD_CHECK_FEE_MICRO_USDC || 1000); // 0.001 USDC
 
@@ -103,6 +104,8 @@ function build402Challenge(paymentId: string) {
       currency: 'USDC',
       asset_id: USDC_ASA_ID,
       network: 'algorand-testnet',
+      network_caip2: ALGORAND_TESTNET_CAIP2,
+      caip2: ALGORAND_TESTNET_CAIP2,
       app_id: ESCROW_APP_ID,
       recipient: DEFAULT_RECIPIENT,
       facilitator_url: FACILITATOR_URL,
@@ -156,7 +159,7 @@ shieldCheckRoute.post('/shield/check', async (c) => {
 
       c.header(
         'WWW-Authenticate',
-        `x402 realm="SLAShield402", amount="${SHIELD_FEE_MICRO_USDC / 1e6}", currency="USDC", network="algorand-testnet", app_id="${ESCROW_APP_ID}", recipient="${DEFAULT_RECIPIENT}", facilitator="${FACILITATOR_URL}"`
+        `x402 realm="SLAShield402", amount="${SHIELD_FEE_MICRO_USDC / 1e6}", currency="USDC", network="algorand-testnet", caip2="${ALGORAND_TESTNET_CAIP2}", app_id="${ESCROW_APP_ID}", recipient="${DEFAULT_RECIPIENT}", facilitator="${FACILITATOR_URL}"`
       );
       return c.json(challengeObj, 402);
     }
@@ -236,6 +239,7 @@ shieldCheckRoute.post('/shield/check', async (c) => {
     });
 
     // 6. If pipeline execution requested (e.g. from Dashboard simulator), complete Person 2 & 3 flow with REAL SUBPROCESS
+    let subprocessResult: { stdout: string; txId: string; explorerUrl: string } | undefined;
     if (body.execute_pipeline) {
       const isStale = body.simulate_stale || false;
       const evalBody = isStale
@@ -267,7 +271,6 @@ shieldCheckRoute.post('/shield/check', async (c) => {
       const microAmount = String(slaResult.settlement_payload.amount || 20000);
 
       // REAL PYTHON SUBPROCESS EXECUTION
-      let subprocessResult: { stdout: string; txId: string; explorerUrl: string };
       if (isPass) {
         subprocessResult = runSmartContractSubprocess('settle.py', [
           '--payment_id', paymentId,
@@ -300,6 +303,8 @@ shieldCheckRoute.post('/shield/check', async (c) => {
       status: 'EXECUTED',
       shield_fee_tx: verification.txId,
       confirmed_round: verification.confirmedRound,
+      settlement_tx_id: subprocessResult?.txId || null,
+      settlement_explorer_url: subprocessResult?.explorerUrl || null,
       decision: firewallResult,
       target_response: targetResponse,
       sla_rules: sla_rules || { max_freshness_sec: 60, format: 'JSON', max_latency_sec: 5 },
