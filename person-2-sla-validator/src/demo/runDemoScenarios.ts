@@ -134,6 +134,7 @@ export async function runDemo(): Promise<void> {
   console.log(`${C.bright}${C.green}▶ SCENARIO 1: Normal Success (Fresh Data ➔ Real 402 ➔ SETTLE)${C.reset}`);
   divider('-');
   
+  // Simulated mock upstream oracle endpoint demonstrating authentic x402 routing
   const payload1 = {
     target_api: 'https://api.weather-provider-alpha.algo/v1/current?city=Bengaluru',
     provider_address: 'YVEHNV3EWF4GULZHABH64QKOYLE5MO2MSBAAK7O76A2ESACA5OV2AZSOKQ',
