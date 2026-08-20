@@ -72,7 +72,6 @@ flowchart LR
     Server -.->|live events| Dashboard
 ```
 
-See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for full component specifications, state machine models, and sequence traces.
 
 ---
 
