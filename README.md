@@ -171,9 +171,9 @@ npm run demo
 | Flow | Transaction ID | Confirmation Round | Lora Explorer Link | Pera Explorer Link |
 |---|---|:---:|---|---|
 | **Escrow Smart Contract** | `App #769236555` | 66480120 | [Lora App #769236555](https://lora.algokit.io/testnet/application/769236555) | [Pera App #769236555](https://testnet.explorer.perawallet.app/application/769236555/) |
-| **Fresh USDC Client Sign** | `2XV4P4BWVA3CACSPQPQ4YF64LSMX5IJRURUJ5SPLCFPI4IFAI2JQ` | 66580445 | [Lora Tx](https://lora.algokit.io/testnet/transaction/2XV4P4BWVA3CACSPQPQ4YF64LSMX5IJRURUJ5SPLCFPI4IFAI2JQ) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/2XV4P4BWVA3CACSPQPQ4YF64LSMX5IJRURUJ5SPLCFPI4IFAI2JQ/) |
-| **Scenario 1: SLA Pass Settle** | `PNLFFW4K7NEG5OHJ5KORIP5ZVU2WGA6H4E2EUDP3DSFXHR44O7JQ` | 66580450 | [Lora Tx](https://lora.algokit.io/testnet/transaction/PNLFFW4K7NEG5OHJ5KORIP5ZVU2WGA6H4E2EUDP3DSFXHR44O7JQ) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/PNLFFW4K7NEG5OHJ5KORIP5ZVU2WGA6H4E2EUDP3DSFXHR44O7JQ/) |
-| **Scenario 3: Refund & Slash** | `WPNPJNN2LZW5IUZNY42NAMH5EPGXZBVJMXSSH2JBXUZQDRLZTZIQ` | 66580458 | [Lora Tx](https://lora.algokit.io/testnet/transaction/WPNPJNN2LZW5IUZNY42NAMH5EPGXZBVJMXSSH2JBXUZQDRLZTZIQ) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/WPNPJNN2LZW5IUZNY42NAMH5EPGXZBVJMXSSH2JBXUZQDRLZTZIQ/) |
+| **Facilitator Co-Signed Settle** | `MAH5JF36CM34EJEMFIL4KBCTCRQLPHX6YKFTLSV3MKFOOKFRBHDQ` | 66580791 | [Lora Tx](https://lora.algokit.io/testnet/transaction/MAH5JF36CM34EJEMFIL4KBCTCRQLPHX6YKFTLSV3MKFOOKFRBHDQ) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/MAH5JF36CM34EJEMFIL4KBCTCRQLPHX6YKFTLSV3MKFOOKFRBHDQ/) |
+| **Scenario 1: SLA Pass Settle** | `FXPXSD46H7D7LCC6OUGINX2DYL2ZZPPPFOYBBK4W5NOCLBESPNSA` | 66580794 | [Lora Tx](https://lora.algokit.io/testnet/transaction/FXPXSD46H7D7LCC6OUGINX2DYL2ZZPPPFOYBBK4W5NOCLBESPNSA) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/FXPXSD46H7D7LCC6OUGINX2DYL2ZZPPPFOYBBK4W5NOCLBESPNSA/) |
+| **Scenario 3: Refund & Slash** | `T26GDLEBPMNJB5OM6W6T62CB5H6TG2AZX6J7U6CX24B6RDDVBRBA` | 66580798 | [Lora Tx](https://lora.algokit.io/testnet/transaction/T26GDLEBPMNJB5OM6W6T62CB5H6TG2AZX6J7U6CX24B6RDDVBRBA) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/T26GDLEBPMNJB5OM6W6T62CB5H6TG2AZX6J7U6CX24B6RDDVBRBA/) |
 
 ---
 
@@ -181,11 +181,11 @@ npm run demo
 
 | # | Organizer Evaluation Requirement | Implementation Evidence & Verification | Status |
 |---|---|---|:---:|
-| **1** | **x402 payment flow live on Algorand Testnet** | Returns HTTP 402 with CAIP-2 `algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=`, client signs USDC ASA #10458941 transfer, server verifies and executes upstream call. | **VERIFIED** |
+| **1** | **x402 payment flow live on Algorand Testnet** | Returns HTTP 402 with CAIP-2 `algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=`, client signs raw ASA #10458941 payment payload, server verifies and executes upstream call. | **VERIFIED** |
 | **2** | **Demonstrable real transaction checkable on Lora** | Live PyTeal Escrow Application [App #769236555 on Lora](https://lora.algokit.io/testnet/application/769236555) with verifiable on-chain state and transactions. | **VERIFIED** |
-| **3** | **Payment flow works through GoPlausible facilitator** | `verifyPaymentProof.ts` and `shieldCheck.ts` query `https://facilitator.goplausible.xyz/verify` and `/settle` with standard `accepts` array and receipt capture. | **VERIFIED** |
+| **3** | **Payment flow works through GoPlausible facilitator** | `verifyPaymentProof.ts` and `shieldCheck.ts` query `https://facilitator.goplausible.xyz/verify` (`isValid: true`) and `/settle` (`success: true`), executing facilitator co-signed settlement tx `MAH5JF36CM34EJEMFIL4KBCTCRQLPHX6YKFTLSV3MKFOOKFRBHDQ`. | **VERIFIED** |
 | **4** | **`package.json` includes relevant `@x402/avm` dependencies** | Root `package.json` includes `@x402/avm` (`^2.19.0`), `@x402/core` (`^2.22.0`), `@x402/fetch` (`^2.22.0`), `@x402/hono` (`^2.22.0`), and `@x402-avm/extensions` (`^2.6.1`). | **VERIFIED** |
-| **5** | **Code genuinely integrates x402** | End-to-end integration across pre-flight firewalling, dynamic client signing, indexer + facilitator dual verification, real-time SLA validation, and PyTeal two-phase escrow. | **VERIFIED** |
+| **5** | **Code genuinely integrates x402** | End-to-end integration across pre-flight firewalling, dynamic client raw byte signing, GoPlausible Facilitator co-signing & settlement, real-time SLA validation, and PyTeal two-phase escrow. | **VERIFIED** |
 
 ---
 
