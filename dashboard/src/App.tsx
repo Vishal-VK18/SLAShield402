@@ -12,8 +12,29 @@ import { WalletModal } from './components/WalletModal.js';
 import { HelpModal } from './components/HelpModal.js';
 import { ShieldEvent, DashboardStats, WalletStatusResponse, ActiveTab } from './types.js';
 
-const SERVER_URL = 'http://localhost:3000';
-const WS_URL = 'ws://localhost:3000/ws';
+// Resolve API and WebSocket URLs dynamically based on environment (local dev vs Render/Vercel production)
+const getApiUrl = (): string => {
+  if (import.meta.env.VITE_API_URL) {
+    return (import.meta.env.VITE_API_URL as string).replace(/\/$/, '');
+  }
+  return 'http://localhost:3000';
+};
+
+const getWsUrl = (): string => {
+  if (import.meta.env.VITE_WS_URL) {
+    return import.meta.env.VITE_WS_URL as string;
+  }
+  if (import.meta.env.VITE_API_URL) {
+    const apiUrl = (import.meta.env.VITE_API_URL as string).replace(/\/$/, '');
+    const wsProto = apiUrl.startsWith('https') ? 'wss:' : 'ws:';
+    const host = apiUrl.replace(/^https?:\/\//, '');
+    return `${wsProto}//${host}/ws`;
+  }
+  return 'ws://localhost:3000/ws';
+};
+
+const SERVER_URL = getApiUrl();
+const WS_URL = getWsUrl();
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');

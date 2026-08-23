@@ -31,7 +31,8 @@ function runSmartContractSubprocess(
 ): { stdout: string; txId: string; explorerUrl: string } {
   const scriptPath = path.join(projectRoot, 'person-3-algorand-contract', 'scripts', scriptName);
   const formattedArgs = args.map((arg) => (arg.startsWith('--') ? arg : `"${arg.replace(/"/g, '\\"')}"`)).join(' ');
-  const command = `py -3.12 "${scriptPath}" ${formattedArgs}`;
+  const pythonCmd = process.platform === 'win32' ? 'py -3.12' : (process.env.PYTHON_BIN || 'python3');
+  const command = `${pythonCmd} "${scriptPath}" ${formattedArgs}`;
 
   try {
     const stdout = execSync(command, {

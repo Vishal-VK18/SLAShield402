@@ -4,6 +4,9 @@
   "description": "SLAShield402 - Autonomous x402 AI Payment Firewall & SLA Settlement Layer",
   "type": "module",
   "scripts": {
+    "start": "tsx person-1-firewall-api/src/index.ts",
+    "build": "npm run build --prefix dashboard",
+    "build:dashboard": "npm run build --prefix dashboard",
     "dev": "tsx person-1-firewall-api/src/index.ts",
     "dev:person-1": "tsx person-1-firewall-api/src/index.ts",
     "dev:dashboard": "npm run dev --prefix dashboard",

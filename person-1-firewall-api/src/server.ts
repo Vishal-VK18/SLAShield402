@@ -36,3 +36,12 @@ app.get('/', (c) => {
     },
   });
 });
+
+// Explicit health check endpoint for cloud orchestrators (Render / Railway / k8s)
+app.get('/health', (c) => {
+  return c.json({
+    status: 'OK',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
