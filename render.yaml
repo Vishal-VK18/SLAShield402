@@ -38,6 +38,10 @@ services:
         value: ""
       - key: DEPLOYER_MNEMONIC
         sync: false
+      - key: NODE_ENV
+        value: production
+      - key: SELF_BASE_URL
+        value: https://slashield402-api.onrender.com
 
   # -------------------------------------------------------------
   # 2. Frontend Static Site: SLAShield402 React/Vite Dashboard
@@ -54,7 +58,6 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: slashield402-api
-          property: host
+        value: https://slashield402-api.onrender.com
+      - key: VITE_WS_URL
+        value: wss://slashield402-api.onrender.com/ws

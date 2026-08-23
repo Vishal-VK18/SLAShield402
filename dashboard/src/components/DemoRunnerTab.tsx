@@ -18,7 +18,17 @@ export const DemoRunnerTab: React.FC<DemoRunnerTabProps> = ({ serverUrl }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenario: scenarioNumber }),
       });
-      const data = await res.json();
+      let data: any;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Server returned non-JSON response (${res.status}): ${text.slice(0, 200)}`);
+      }
+      if (!res.ok) {
+        throw new Error(data?.error || data?.message || `Request failed with status ${res.status}`);
+      }
       setResults((prev) => ({ ...prev, [scenarioNumber]: data }));
     } catch (err: any) {
       setResults((prev) => ({

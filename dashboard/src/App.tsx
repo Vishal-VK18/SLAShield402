@@ -14,24 +14,31 @@ import { ShieldEvent, DashboardStats, WalletStatusResponse, ActiveTab } from './
 
 // Resolve API and WebSocket URLs dynamically based on environment (local dev vs Render/Vercel production)
 const getApiUrl = (): string => {
-  if (import.meta.env.VITE_API_URL) {
-    return (import.meta.env.VITE_API_URL as string).replace(/\/$/, '');
+  const raw = import.meta.env.VITE_API_URL as string | undefined;
+  // Only accept values that start with http:// or https:// — bare hostnames (from old
+  // Render fromService: host) would silently produce broken WS URLs like ws://slashield402-api/ws
+  if (raw && (raw.startsWith('https://') || raw.startsWith('http://'))) {
+    return raw.replace(/\/$/, '');
   }
   return 'http://localhost:3000';
 };
 
 const getWsUrl = (): string => {
-  if (import.meta.env.VITE_WS_URL) {
-    return import.meta.env.VITE_WS_URL as string;
+  // VITE_WS_URL takes priority (explicitly set in render.yaml to wss://...)
+  const wsEnv = import.meta.env.VITE_WS_URL as string | undefined;
+  if (wsEnv && (wsEnv.startsWith('wss://') || wsEnv.startsWith('ws://'))) {
+    return wsEnv;
   }
-  if (import.meta.env.VITE_API_URL) {
-    const apiUrl = (import.meta.env.VITE_API_URL as string).replace(/\/$/, '');
+  // Derive from VITE_API_URL — only if it has a valid scheme
+  const apiUrl = getApiUrl();
+  if (apiUrl !== 'http://localhost:3000') {
     const wsProto = apiUrl.startsWith('https') ? 'wss:' : 'ws:';
     const host = apiUrl.replace(/^https?:\/\//, '');
     return `${wsProto}//${host}/ws`;
   }
   return 'ws://localhost:3000/ws';
 };
+
 
 const SERVER_URL = getApiUrl();
 const WS_URL = getWsUrl();
