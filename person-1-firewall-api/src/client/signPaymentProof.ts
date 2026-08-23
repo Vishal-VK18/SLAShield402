@@ -27,6 +27,11 @@ export interface SignedPaymentProof {
 }
 
 /**
+ * [SECURITY NOTICE & NON-CUSTODIAL MODEL]
+ * In production dApps, human users sign non-custodially via wallet extensions (Pera, Defly, @txnlab/use-wallet).
+ * For autonomous AI agents & CLI automated testing pipelines, transactions are signed using disposable,
+ * testnet-only delegate credentials loaded from environment variables.
+ * 
  * Constructs, signs, and broadcasts a fresh on-chain Algorand USDC ASA transfer transaction
  * (ASA ID: 10458941) to satisfy the x402 402 challenge, broadcasting it to Algorand Testnet.
  */

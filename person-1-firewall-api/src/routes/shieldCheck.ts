@@ -93,11 +93,24 @@ function extractPaymentTxId(c: any, body: any): string | null {
  */
 function build402Challenge(paymentId: string) {
   const nonce = `NONCE-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+  const priceStr = `$${(SHIELD_FEE_MICRO_USDC / 1e6).toFixed(3)}`;
+
   return {
     x402: true,
     status: 402,
     error: 'Payment Required',
     message: 'SLAShield402 firewall requires an on-chain x402 verification fee (0.001 USDC) to evaluate and secure this API call.',
+    accepts: [
+      {
+        scheme: 'exact',
+        price: priceStr,
+        network: ALGORAND_TESTNET_CAIP2,
+        payTo: DEFAULT_RECIPIENT,
+        extra: {
+          asset: USDC_ASA_ID,
+        },
+      },
+    ],
     challenge: {
       amount_usdc: SHIELD_FEE_MICRO_USDC / 1e6,
       amount_microunits: SHIELD_FEE_MICRO_USDC,
@@ -136,6 +149,14 @@ shieldCheckRoute.post('/shield/check', async (c) => {
     const paymentId = body.payment_id || `REQ-SHIELD-${Date.now()}`;
     const txId = extractPaymentTxId(c, body);
 
+    const paymentRequirements = {
+      scheme: 'exact',
+      price: `$${(SHIELD_FEE_MICRO_USDC / 1e6).toFixed(3)}`,
+      network: ALGORAND_TESTNET_CAIP2,
+      payTo: DEFAULT_RECIPIENT,
+      extra: { asset: USDC_ASA_ID },
+    };
+
     // 1. Emit Event: request_received
     eventBus.emit('request_received', {
       payment_id: paymentId,
@@ -164,8 +185,8 @@ shieldCheckRoute.post('/shield/check', async (c) => {
       return c.json(challengeObj, 402);
     }
 
-    // 3. Real on-chain verification against Algorand Testnet
-    const verification = await verifyTransactionOnChain(txId);
+    // 3. Real on-chain verification against Algorand Testnet + GoPlausible Facilitator
+    const verification = await verifyTransactionOnChain(txId, paymentRequirements);
 
     if (!verification.valid) {
       // Emit Event: payment_verified (REJECTED)
@@ -182,15 +203,22 @@ shieldCheckRoute.post('/shield/check', async (c) => {
         error: 'Payment Verification Failed',
         reason: verification.reason,
         submitted_tx_id: txId,
+        facilitator_verification: verification.facilitator_verification,
         challenge: build402Challenge(paymentId).challenge
       }, 403);
     }
+
+    // Settle the shield verification fee specifically on GoPlausible Facilitator
+    const { queryFacilitatorSettle } = await import('../verifier/verifyPaymentProof.js');
+    const facilitatorSettlement = await queryFacilitatorSettle(txId, paymentRequirements);
+    console.log(`[Facilitator Settle] Fee settled via ${FACILITATOR_URL}: success=${facilitatorSettlement.success}`);
 
     // Emit Event: payment_verified (CONFIRMED)
     eventBus.emit('payment_verified', {
       payment_id: paymentId,
       tx_id: verification.txId,
-      confirmed_round: verification.confirmedRound
+      confirmed_round: verification.confirmedRound,
+      facilitator_verified: verification.facilitator_verification?.isValid ?? false,
     });
 
     // 4. Payment proof verified on-chain -> Run Person 1 Firewall Rules
@@ -200,52 +228,49 @@ shieldCheckRoute.post('/shield/check', async (c) => {
       providerAddress: provider_address || 'unknown_provider',
     });
 
-    // Emit Event: firewall_decision
-    eventBus.emit('firewall_decision', {
+    // Emit Event: firewall_checked
+    eventBus.emit('firewall_checked', {
       payment_id: paymentId,
       approved: firewallResult.approved,
-      checks: firewallResult.checks,
-      reason: firewallResult.reason
+      reason: firewallResult.reason,
+      offer_price: Number(offer_price),
+      budget_left: Number(agent_budget_left)
     });
 
+    // If Firewall rejects budget/policy -> Return 400 with refusal reason
     if (!firewallResult.approved) {
       return c.json({
         status: 'BLOCKED',
         shield_fee_tx: verification.txId,
         confirmed_round: verification.confirmedRound,
-        decision: firewallResult,
+        facilitator_settlement: facilitatorSettlement,
         reason: firewallResult.reason,
-        protection: 'Firewall intercepted anomalous request. Target API payment was aborted before smart contract escrow lock.'
+        decision: firewallResult,
+        agent_budget_remaining: Number(agent_budget_left)
       }, 400);
     }
 
-    // 5. Firewall Approved -> Execute Outgoing x402 Payment to Target API
+    // 5. Firewall Approved -> Forward outgoing paid request to Target API
     const startFetch = Date.now();
-    const targetResponse = await payTargetApi(target_api);
-    const latencySec = Number(((Date.now() - startFetch) / 1000).toFixed(3)) || 0.32;
+    const targetResponse = await payTargetApi(target_api, Number(offer_price));
+    const latencySec = Number(((Date.now() - startFetch) / 1000).toFixed(3)) || 0.05;
+    const responseStatus = targetResponse.success ? 200 : 500;
 
-    const responseBody = targetResponse.data || {
-      city: 'Bengaluru',
-      temp_c: 28,
-      timestamp: new Date().toISOString()
-    };
-
-    // Emit Event: target_api_response
-    eventBus.emit('target_api_response', {
+    // Emit Event: target_response
+    eventBus.emit('target_response', {
       payment_id: paymentId,
-      status: targetResponse.status || 200,
+      target_api,
+      status: responseStatus,
       latency_sec: latencySec,
-      body: responseBody
+      data: targetResponse.data
     });
 
-    // 6. If pipeline execution requested (e.g. from Dashboard simulator), complete Person 2 & 3 flow with REAL SUBPROCESS
-    let subprocessResult: { stdout: string; txId: string; explorerUrl: string } | undefined;
-    if (body.execute_pipeline) {
-      const isStale = body.simulate_stale || false;
-      const evalBody = isStale
-        ? { symbol: 'ALGO-USDC', price: 0.2854, timestamp: new Date(Date.now() - 14400000).toISOString() }
-        : responseBody;
+    let subprocessResult: { stdout: string; txId: string; explorerUrl: string } | null = null;
 
+    if (targetResponse.success && targetResponse.data) {
+      const evalBody = targetResponse.data;
+
+      // Run Outcome Validator
       const slaResult = validateOutcome({
         payment_id: paymentId,
         agent_address: DEFAULT_RECIPIENT,
@@ -270,7 +295,7 @@ shieldCheckRoute.post('/shield/check', async (c) => {
       const action = slaResult.settlement_payload.action;
       const microAmount = String(slaResult.settlement_payload.amount || 20000);
 
-      // REAL PYTHON SUBPROCESS EXECUTION
+      // REAL PYTHON SUBPROCESS EXECUTION FOR CONDITIONAL TWO-PHASE ESCROW
       if (isPass) {
         subprocessResult = runSmartContractSubprocess('settle.py', [
           '--payment_id', paymentId,
@@ -303,6 +328,8 @@ shieldCheckRoute.post('/shield/check', async (c) => {
       status: 'EXECUTED',
       shield_fee_tx: verification.txId,
       confirmed_round: verification.confirmedRound,
+      facilitator_verification: verification.facilitator_verification,
+      facilitator_settlement: facilitatorSettlement,
       settlement_tx_id: subprocessResult?.txId || null,
       settlement_explorer_url: subprocessResult?.explorerUrl || null,
       decision: firewallResult,
