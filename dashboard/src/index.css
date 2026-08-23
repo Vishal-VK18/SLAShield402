@@ -3,98 +3,35 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --apple-bg: #F5F5F7;
-    --apple-glass-base: rgba(255, 255, 255, 0.75);
-    --apple-glass-heavy: rgba(255, 255, 255, 0.88);
-    --apple-glass-card: rgba(255, 255, 255, 0.65);
-    --apple-border: rgba(0, 0, 0, 0.08);
-    --apple-highlight: rgba(255, 255, 255, 0.7);
-    --apple-text: #1D1D1F;
-    --apple-secondary: #86868B;
-  }
-
   body {
-    background-color: var(--apple-bg);
-    color: var(--apple-text);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", sans-serif;
-    letter-spacing: -0.01em;
+    background-color: #E7E9ED;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #1B1F19;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-
-  h1, h2, h3, h4, .stat-value {
-    letter-spacing: -0.03em;
-  }
 }
 
-/* Apple Materials System */
-.glass-panel {
-  background: var(--apple-glass-base);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid var(--apple-border);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.04), inset 0 1px 0 0 var(--apple-highlight);
+/* Custom scrollbar matching Stitch design */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
 }
 
-.glass-card {
-  background: var(--apple-glass-card);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.03), inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.glass-card:hover {
-  box-shadow: 0 8px 30px 0 rgba(0, 0, 0, 0.06), inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #E3E5E2;
+  border-radius: 9999px;
 }
 
-.glass-pill {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.9);
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #c3c9b1;
 }
 
-.apple-button {
-  background: #1D1D1F;
-  color: #FFFFFF;
-  border-radius: 980px;
-  font-weight: 500;
-  transition: transform 100ms ease-out, background 150ms ease;
-}
-
-.apple-button:hover {
-  background: #000000;
-}
-
-.apple-button:active {
-  transform: scale(0.97);
-}
-
-.apple-secondary-button {
-  background: rgba(0, 0, 0, 0.05);
-  color: #1D1D1F;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 980px;
-  font-weight: 500;
-  transition: transform 100ms ease-out, background 150ms ease;
-}
-
-.apple-secondary-button:hover {
-  background: rgba(0, 0, 0, 0.08);
-}
-
-.apple-secondary-button:active {
-  transform: scale(0.97);
-}
-
-/* Reduced Motion Fallback */
-@media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+/* Smooth transitions */
+.stitch-pill-transition {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }

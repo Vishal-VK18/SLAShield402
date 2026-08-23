@@ -1,15 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header.js';
-import { StatsStrip } from './components/StatsStrip.js';
-import { SendTestRequest } from './components/SendTestRequest.js';
-import { LiveEventFeed } from './components/LiveEventFeed.js';
-import { TransactionProofPanel } from './components/TransactionProofPanel.js';
-import { ShieldEvent, DashboardStats } from './types.js';
+import { Sidebar } from './components/Sidebar.js';
+import { OverviewTab } from './components/OverviewTab.js';
+import { ActivityTab } from './components/ActivityTab.js';
+import { ProtectionTab } from './components/ProtectionTab.js';
+import { PaymentsTab } from './components/PaymentsTab.js';
+import { SlaMonitorTab } from './components/SlaMonitorTab.js';
+import { DemoRunnerTab } from './components/DemoRunnerTab.js';
+import { TransactionModal } from './components/TransactionModal.js';
+import { WalletModal } from './components/WalletModal.js';
+import { HelpModal } from './components/HelpModal.js';
+import { ShieldEvent, DashboardStats, WalletStatusResponse, ActiveTab } from './types.js';
 
 const SERVER_URL = 'http://localhost:3000';
 const WS_URL = 'ws://localhost:3000/ws';
 
 export function App() {
+  const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
   const [events, setEvents] = useState<ShieldEvent[]>([]);
   const [connected, setConnected] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
@@ -18,13 +25,50 @@ export function App() {
     blockedCount: 1,
     settledAmountUsdc: 0.040,
     refundedAmountUsdc: 0.020,
+    slashedAmountUsdc: 1.000,
   });
+  const [walletStatus, setWalletStatus] = useState<WalletStatusResponse | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<ShieldEvent | null>(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [runningQuickCheck, setRunningQuickCheck] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
 
-  // Connect to WebSocket with reconnect logic
+  // 1. Fetch live wallet balance
+  const fetchWalletStatus = async () => {
+    try {
+      const res = await fetch(`${SERVER_URL}/api/wallet/status`);
+      if (res.ok) {
+        const data = await res.json();
+        setWalletStatus(data);
+      }
+    } catch (err) {
+      console.warn('Could not fetch wallet status:', err);
+    }
+  };
+
+  // 2. Fetch recent events backlog
+  const fetchRecentEvents = async () => {
+    try {
+      const res = await fetch(`${SERVER_URL}/api/events/recent`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.events)) {
+          setEvents(data.events.reverse());
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch recent events backlog:', err);
+    }
+  };
+
+  // 3. Connect to WebSocket with auto-reconnect
   useEffect(() => {
-    let reconnectTimeout: any;
+    fetchWalletStatus();
+    fetchRecentEvents();
+
+    let reconnectTimer: any;
 
     const connectWebSocket = () => {
       try {
@@ -33,6 +77,7 @@ export function App() {
 
         ws.onopen = () => {
           setConnected(true);
+          fetchWalletStatus();
         };
 
         ws.onmessage = (message) => {
@@ -41,11 +86,10 @@ export function App() {
 
             if (data.type === 'init' && Array.isArray(data.backlog)) {
               setEvents((prev) => {
-                const combined = [...data.backlog, ...prev];
-                // Remove duplicates based on timestamp + event
+                const combined = [...data.backlog.reverse(), ...prev];
                 const seen = new Set();
                 return combined.filter((ev) => {
-                  const key = `${ev.event}-${ev.timestamp}`;
+                  const key = `${ev.event}-${ev.timestamp}-${ev.data?.payment_id || ''}`;
                   if (seen.has(key)) return false;
                   seen.add(key);
                   return true;
@@ -65,6 +109,7 @@ export function App() {
                 let blocked = prev.blockedCount;
                 let settled = prev.settledAmountUsdc;
                 let refunded = prev.refundedAmountUsdc;
+                let slashed = prev.slashedAmountUsdc;
 
                 if (newEvent.event === 'request_received') {
                   total += 1;
@@ -79,6 +124,7 @@ export function App() {
                     settled += (newEvent.data?.amount || 20000) / 1e6;
                   } else if (newEvent.data?.action === 'REFUND_AND_PENALIZE') {
                     refunded += (newEvent.data?.amount || 20000) / 1e6;
+                    slashed += (newEvent.data?.slashed_amount || 1000000) / 1e6;
                   }
                 }
 
@@ -88,8 +134,11 @@ export function App() {
                   blockedCount: blocked,
                   settledAmountUsdc: settled,
                   refundedAmountUsdc: refunded,
+                  slashedAmountUsdc: slashed,
                 };
               });
+
+              fetchWalletStatus();
             }
           } catch (e) {
             console.error('Error parsing WS message:', e);
@@ -98,7 +147,7 @@ export function App() {
 
         ws.onclose = () => {
           setConnected(false);
-          reconnectTimeout = setTimeout(connectWebSocket, 2000);
+          reconnectTimer = setTimeout(connectWebSocket, 3000);
         };
 
         ws.onerror = () => {
@@ -106,45 +155,130 @@ export function App() {
           ws.close();
         };
       } catch (err) {
-        setConnected(false);
-        reconnectTimeout = setTimeout(connectWebSocket, 2000);
+        console.error('WebSocket connection error:', err);
+        reconnectTimer = setTimeout(connectWebSocket, 3000);
       }
     };
 
     connectWebSocket();
 
     return () => {
+      clearTimeout(reconnectTimer);
       if (wsRef.current) wsRef.current.close();
-      clearTimeout(reconnectTimeout);
     };
   }, []);
 
+  // Quick Protection Check handler
+  const handleRunQuickCheck = async () => {
+    setRunningQuickCheck(true);
+    try {
+      const payload = {
+        target_api: 'https://api.weather-provider-alpha.algo/v1/current?city=Bengaluru',
+        offer_price: 0.02,
+        agent_budget_left: 1.0,
+      };
+
+      const res = await fetch(`${SERVER_URL}/shield/check`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (res.status === 402) {
+        setSelectedEvent({
+          event: 'challenge_issued',
+          timestamp: new Date().toISOString(),
+          data: {
+            ...data,
+            message: 'x402 Verification Challenge issued by SLAShield402',
+          },
+        });
+      }
+    } catch (err: any) {
+      console.error('Quick check error:', err);
+    } finally {
+      setRunningQuickCheck(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#F5F5F7] flex flex-col selection:bg-black/10">
-      <Header connected={connected} eventCount={events.length} />
+    <div className="bg-app-surface w-full max-w-[1440px] rounded-app shadow-premium overflow-hidden flex flex-col min-h-[90vh] md:h-[92vh] border border-border-light/40">
+      {/* Top Navigation Bar */}
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        connected={connected}
+        walletStatus={walletStatus}
+        onOpenWalletModal={() => setShowWalletModal(true)}
+      />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
-        <StatsStrip stats={stats} />
+      {/* Main Content Area with Sidebar */}
+      <div className="flex-1 overflow-hidden flex p-4 md:p-6 gap-6">
+        {/* Minimal Left Icon Sidebar */}
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onOpenHelp={() => setShowHelpModal(true)}
+        />
 
-        <SendTestRequest serverUrl={SERVER_URL} />
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <LiveEventFeed
+        {/* Dynamic Tab Body (Scrollable) */}
+        <main className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+          {activeTab === 'overview' && (
+            <OverviewTab
               events={events}
-              onClear={() => setEvents([])}
+              stats={stats}
+              walletStatus={walletStatus}
+              setActiveTab={setActiveTab}
+              onSelectEvent={(ev) => setSelectedEvent(ev)}
+              onRunQuickCheck={handleRunQuickCheck}
+              runningCheck={runningQuickCheck}
             />
-          </div>
+          )}
 
-          <div className="lg:col-span-1">
-            <TransactionProofPanel />
-          </div>
-        </div>
-      </main>
+          {activeTab === 'activity' && (
+            <ActivityTab
+              events={events}
+              onSelectEvent={(ev) => setSelectedEvent(ev)}
+            />
+          )}
 
-      <footer className="w-full py-6 border-t border-black/5 text-center text-xs text-[#86868B]">
-        SLAShield402 · Algorand Testnet App #769236555 · x402 AI Agent Payment Firewall
-      </footer>
+          {activeTab === 'protection' && (
+            <ProtectionTab serverUrl={SERVER_URL} />
+          )}
+
+          {activeTab === 'payments' && (
+            <PaymentsTab />
+          )}
+
+          {activeTab === 'sla' && (
+            <SlaMonitorTab />
+          )}
+
+          {activeTab === 'demo' && (
+            <DemoRunnerTab serverUrl={SERVER_URL} />
+          )}
+        </main>
+      </div>
+
+      {/* Modals */}
+      {selectedEvent && (
+        <TransactionModal
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+        />
+      )}
+
+      {showWalletModal && (
+        <WalletModal
+          walletStatus={walletStatus}
+          onClose={() => setShowWalletModal(false)}
+        />
+      )}
+
+      {showHelpModal && (
+        <HelpModal onClose={() => setShowHelpModal(false)} />
+      )}
     </div>
   );
 }

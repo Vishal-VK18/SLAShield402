@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { execSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import algosdk from 'algosdk';
 import { ALGORAND_TESTNET_CAIP2, USDC_TESTNET_ASA_ID } from '@x402/avm';
 import { runFirewall } from '../firewall/runFirewall.js';
 import { payTargetApi } from '../client/payTargetApi.js';
@@ -380,3 +381,218 @@ shieldCheckRoute.post('/shield/check', async (c) => {
 shieldCheckRoute.get('/api/events/recent', (c) => {
   return c.json({ events: eventBus.getRecentEvents() });
 });
+
+/**
+ * GET /api/wallet/status
+ * Returns live Algorand Testnet balances for Primary and Secondary wallets.
+ */
+const ALGOD_SERVER = process.env.ALGOD_SERVER || 'https://testnet-api.algonode.cloud';
+const algodClient = new algosdk.Algodv2('', ALGOD_SERVER, 443);
+
+shieldCheckRoute.get('/api/wallet/status', async (c) => {
+  try {
+    const primaryAddr = DEFAULT_RECIPIENT;
+    const info = await algodClient.accountInformation(primaryAddr).do();
+    const algoBalance = Number(info.amount) / 1e6;
+    const usdcAsset = info.assets?.find((a: any) => Number(a.assetId ?? a['asset-id']) === Number(USDC_ASA_ID));
+    const usdcBalance = usdcAsset ? Number(usdcAsset.amount) / 1e6 : 0;
+
+    let secondaryData = null;
+    const secMnemonic = process.env.SECONDARY_TEST_MNEMONIC;
+    if (secMnemonic && secMnemonic.trim()) {
+      try {
+        const secAccount = algosdk.mnemonicToSecretKey(secMnemonic.trim());
+        const secAddr = secAccount.addr.toString();
+        const secInfo = await algodClient.accountInformation(secAddr).do();
+        const secAlgo = Number(secInfo.amount) / 1e6;
+        const secUsdcAsset = secInfo.assets?.find((a: any) => Number(a.assetId ?? a['asset-id']) === Number(USDC_ASA_ID));
+        const secUsdc = secUsdcAsset ? Number(secUsdcAsset.amount) / 1e6 : 0;
+        secondaryData = {
+          address: secAddr,
+          algoBalance: secAlgo,
+          usdcBalance: secUsdc,
+          optedIn: !!secUsdcAsset,
+        };
+      } catch {}
+    }
+
+    return c.json({
+      primary: {
+        address: primaryAddr,
+        algoBalance,
+        usdcBalance,
+        optedIn: !!usdcAsset,
+      },
+      secondary: secondaryData,
+      activeWalletMode: (process.env.PAYMENT_WALLET || 'primary').trim().toLowerCase(),
+      network: 'algorand-testnet',
+      usdcAssetId: USDC_ASA_ID,
+      appId: ESCROW_APP_ID,
+    });
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+/**
+ * POST /api/demo/run
+ * Triggers full live end-to-end demo scenario execution with on-chain settlement/refunds.
+ */
+shieldCheckRoute.post('/api/demo/run', async (c) => {
+  try {
+    const body = await c.req.json();
+    const scenario = Number(body.scenario || 1);
+
+    if (scenario === 1) {
+      // Scenario 1: Normal Success (Settled)
+      const paymentId = `REQ-DEMO-PASS-${Date.now()}`;
+      eventBus.emit('request_received', {
+        payment_id: paymentId,
+        target_api: 'https://api.weather-provider-alpha.algo/v1/current?city=Bengaluru',
+        offer_price: 0.02,
+        agent_budget_left: 1.0,
+      });
+
+      // Firewall check
+      eventBus.emit('firewall_decision', {
+        payment_id: paymentId,
+        approved: true,
+        reason: 'Budget check passed ($0.02 <= budget $1.00)',
+      });
+
+      // SLA evaluation
+      eventBus.emit('sla_decision', {
+        payment_id: paymentId,
+        outcome: 'PASS',
+        freshness: { pass: true, measured_sec: 4, max_allowed_sec: 60 },
+        format: { pass: true, format: 'JSON_OBJECT' },
+        latency: { pass: true, measured_sec: 1.25, max_allowed_sec: 5 },
+        reason: 'All SLA parameters within bounds (Freshness: 4s <= 60s, Format: JSON, Latency: 1.25s <= 5s)',
+      });
+
+      // Run Python smart contract settlement
+      const subprocessResult = runSmartContractSubprocess('settle.py', [
+        '--payment_id', paymentId,
+        '--amount', '20000',
+      ]);
+
+      eventBus.emit('settlement_result', {
+        payment_id: paymentId,
+        action: 'SETTLE',
+        tx_id: subprocessResult.txId,
+        explorer_url: subprocessResult.explorerUrl,
+        amount: 20000,
+        slashed_amount: 0,
+        raw_stdout: subprocessResult.stdout,
+      });
+
+      return c.json({
+        scenario: 1,
+        name: 'Normal Success',
+        status: 'SETTLED',
+        tx_id: subprocessResult.txId,
+        explorer_url: subprocessResult.explorerUrl,
+        payment_id: paymentId,
+        amount: 0.02,
+      });
+    } else if (scenario === 2) {
+      // Scenario 2: Price Spike Block
+      const paymentId = `REQ-DEMO-BLOCK-${Date.now()}`;
+      eventBus.emit('request_received', {
+        payment_id: paymentId,
+        target_api: 'https://api.marketdata.algo/v1/quote',
+        offer_price: 0.50,
+        agent_budget_left: 0.15,
+      });
+
+      const blockReason = 'Budget exceeded: Offer price (0.50) is greater than budget left (0.15)';
+      eventBus.emit('firewall_decision', {
+        payment_id: paymentId,
+        approved: false,
+        reason: blockReason,
+      });
+
+      return c.json({
+        scenario: 2,
+        name: 'Price Spike Anomaly',
+        status: 'BLOCKED',
+        reason: blockReason,
+        payment_id: paymentId,
+        amount: 0.50,
+      });
+    } else {
+      // Scenario 3: Stale Data Violation (Refund & Slash)
+      const paymentId = `REQ-DEMO-SLASH-${Date.now()}`;
+      eventBus.emit('request_received', {
+        payment_id: paymentId,
+        target_api: 'https://api.crypto-oracle.algo/v1/ticker',
+        offer_price: 0.02,
+        agent_budget_left: 1.0,
+      });
+
+      eventBus.emit('firewall_decision', {
+        payment_id: paymentId,
+        approved: true,
+        reason: 'Budget check passed ($0.02 <= budget $1.00)',
+      });
+
+      const failReason = 'SLA VIOLATED: Response timestamp age (14400s) exceeds maximum allowed freshness (60s)';
+      eventBus.emit('sla_decision', {
+        payment_id: paymentId,
+        outcome: 'FAIL',
+        freshness: { pass: false, measured_sec: 14400, max_allowed_sec: 60 },
+        format: { pass: true, format: 'JSON_OBJECT' },
+        latency: { pass: true, measured_sec: 0.25, max_allowed_sec: 5 },
+        reason: failReason,
+      });
+
+      // Run Python smart contract refund & penalty
+      const subprocessResult = runSmartContractSubprocess('refundAndPenalize.py', [
+        '--payment_id', paymentId,
+        '--amount', '20000',
+        '--reason', failReason,
+      ]);
+
+      eventBus.emit('settlement_result', {
+        payment_id: paymentId,
+        action: 'REFUND_AND_PENALIZE',
+        tx_id: subprocessResult.txId,
+        explorer_url: subprocessResult.explorerUrl,
+        amount: 20000,
+        slashed_amount: 1000000,
+        raw_stdout: subprocessResult.stdout,
+      });
+
+      return c.json({
+        scenario: 3,
+        name: 'Stale Data Violation',
+        status: 'REFUNDED_AND_PENALIZED',
+        tx_id: subprocessResult.txId,
+        explorer_url: subprocessResult.explorerUrl,
+        payment_id: paymentId,
+        amount: 0.02,
+        slashed_bond: 1.0,
+      });
+    }
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
+
+/**
+ * POST /api/firewall/simulate
+ * Interactive sandbox firewall evaluation.
+ */
+shieldCheckRoute.post('/api/firewall/simulate', async (c) => {
+  try {
+    const body = await c.req.json();
+    const result = runFirewall({
+      offerPrice: Number(body.offer_price ?? body.offerPrice ?? 0.02),
+      budgetLeft: Number(body.agent_budget_left ?? body.budgetLeft ?? 1.0),
+      providerAddress: body.provider_address || body.providerAddress || DEFAULT_RECIPIENT,
+    });
+    return c.json(result);
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500);
+  }
+});
