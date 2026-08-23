@@ -45,7 +45,6 @@ services:
   - type: web
     name: slashield402-dashboard
     runtime: static
-    plan: free
     rootDir: dashboard
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
