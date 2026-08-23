@@ -158,7 +158,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           <div className="bg-app-surface border border-border-light rounded-card p-4 flex flex-col justify-between shadow-premium">
             <div className="flex justify-between items-start mb-1">
               <span className="text-[12px] font-medium text-text-muted">Threats Blocked</span>
-              <span className="material-symbols-outlined text-[16px] text-error">gpm_bad</span>
+              <span className="material-symbols-outlined text-[16px] text-error">gpp_bad</span>
             </div>
             <div>
               <h3 className="text-[22px] font-bold text-charcoal tracking-tight font-mono">
