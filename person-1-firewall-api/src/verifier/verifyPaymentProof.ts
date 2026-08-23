@@ -80,10 +80,11 @@ export async function verifyWithFacilitator(
 ): Promise<{ isValid: boolean; payer?: string; invalidReason?: string; raw?: any }> {
   try {
     await ensureResourceServerInitialized();
+    const amountVal = requirements?.amount || paymentPayload?.accepted?.amount || paymentPayload?.payload?.paymentRequirements?.amount || '1000';
     const req = requirements || {
       scheme: 'exact',
       network: FULL_TESTNET_CAIP2,
-      amount: '0',
+      amount: String(amountVal),
       asset: String(USDC_TESTNET_ASA_ID),
       payTo: process.env.SLASHIELD_RECIPIENT_ADDRESS || 'YVEHNV3EWF4GULZHABH64QKOYLE5MO2MSBAAK7O76A2ESACA5OV2AZSOKQ',
       maxTimeoutSeconds: 300,
@@ -119,10 +120,11 @@ export async function settleWithFacilitator(
 ): Promise<FacilitatorSettlementResult> {
   try {
     await ensureResourceServerInitialized();
+    const amountVal = requirements?.amount || paymentPayload?.accepted?.amount || paymentPayload?.payload?.paymentRequirements?.amount || '1000';
     const req = requirements || {
       scheme: 'exact',
       network: FULL_TESTNET_CAIP2,
-      amount: '0',
+      amount: String(amountVal),
       asset: String(USDC_TESTNET_ASA_ID),
       payTo: process.env.SLASHIELD_RECIPIENT_ADDRESS || 'YVEHNV3EWF4GULZHABH64QKOYLE5MO2MSBAAK7O76A2ESACA5OV2AZSOKQ',
       maxTimeoutSeconds: 300,

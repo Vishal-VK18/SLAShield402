@@ -114,7 +114,7 @@ function build402Challenge(paymentId: string) {
       {
         scheme: 'exact',
         network: 'algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=',
-        amount: '0',
+        amount: '1000',
         asset: String(USDC_ASA_ID),
         payTo: DEFAULT_RECIPIENT,
         maxTimeoutSeconds: 300,
@@ -161,11 +161,12 @@ shieldCheckRoute.post('/shield/check', async (c) => {
 
     const paymentId = body.payment_id || `REQ-SHIELD-${Date.now()}`;
     const proof = extractPaymentProof(c, body);
+    const requestedAmount = proof?.accepted?.amount || '1000';
 
     const paymentRequirements = {
       scheme: 'exact',
       network: 'algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=',
-      amount: '0',
+      amount: requestedAmount,
       asset: String(USDC_ASA_ID),
       payTo: DEFAULT_RECIPIENT,
       maxTimeoutSeconds: 300,
