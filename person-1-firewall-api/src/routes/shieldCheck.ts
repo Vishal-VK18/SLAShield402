@@ -22,6 +22,13 @@ const USDC_ASA_ID = Number(process.env.USDC_ASA_ID) || USDC_TESTNET_ASA_ID;
 const ESCROW_APP_ID = Number(process.env.SLASHIELD_ESCROW_APP_ID || 769236555);
 const SHIELD_FEE_MICRO_USDC = Number(process.env.SHIELD_CHECK_FEE_MICRO_USDC || 1000); // 0.001 USDC
 
+// Production-aware self URL — used in x402 challenge resource.url so clients know where to retry
+const SELF_BASE_URL = process.env.SELF_BASE_URL
+  || (process.env.RENDER_SERVICE_URL  // Render injects this automatically
+  || (process.env.NODE_ENV === 'production'
+      ? 'https://slashield402-api.onrender.com'
+      : `http://localhost:${process.env.PORT || 3000}`));
+
 /**
  * Spawns a real Python subprocess to run Person 3's smart contract scripts.
  */
@@ -110,7 +117,7 @@ function build402Challenge(paymentId: string) {
     error: 'Payment Required',
     message: 'SLAShield402 firewall requires an on-chain x402 verification fee (0.001 USDC) to evaluate and secure this API call.',
     resource: {
-      url: 'http://localhost:3000/shield/check'
+      url: `${SELF_BASE_URL}/shield/check`
     },
     accepts: [
       {
