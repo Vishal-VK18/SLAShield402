@@ -11,7 +11,10 @@
     "test": "tsx person-1-firewall-api/tests/firewall.test.ts",
     "test:person-1": "tsx person-1-firewall-api/tests/firewall.test.ts",
     "test:person-2": "tsx person-2-sla-validator/tests/validateOutcome.test.ts",
-    "demo": "tsx person-2-sla-validator/src/demo/runDemoScenarios.ts"
+    "demo": "tsx person-2-sla-validator/src/demo/runDemoScenarios.ts",
+    "wallet:status": "tsx scripts/walletStatus.ts",
+    "wallet:create-secondary": "tsx scripts/createSecondaryWallet.ts",
+    "wallet:optin-secondary": "tsx scripts/optInSecondaryUsdc.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.1",

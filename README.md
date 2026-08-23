@@ -168,12 +168,13 @@ npm run demo
 
 ## Live On-Chain Proofs (Algorand Testnet)
 
-| Flow | Transaction ID | Confirmation Round | Lora Explorer Link | Pera Explorer Link |
-|---|---|:---:|---|---|
-| **Escrow Smart Contract** | `App #769236555` | 66480120 | [Lora App #769236555](https://lora.algokit.io/testnet/application/769236555) | [Pera App #769236555](https://testnet.explorer.perawallet.app/application/769236555/) |
-| **Facilitator Co-Signed Settle** | `MAH5JF36CM34EJEMFIL4KBCTCRQLPHX6YKFTLSV3MKFOOKFRBHDQ` | 66580791 | [Lora Tx](https://lora.algokit.io/testnet/transaction/MAH5JF36CM34EJEMFIL4KBCTCRQLPHX6YKFTLSV3MKFOOKFRBHDQ) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/MAH5JF36CM34EJEMFIL4KBCTCRQLPHX6YKFTLSV3MKFOOKFRBHDQ/) |
-| **Scenario 1: SLA Pass Settle** | `FXPXSD46H7D7LCC6OUGINX2DYL2ZZPPPFOYBBK4W5NOCLBESPNSA` | 66580794 | [Lora Tx](https://lora.algokit.io/testnet/transaction/FXPXSD46H7D7LCC6OUGINX2DYL2ZZPPPFOYBBK4W5NOCLBESPNSA) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/FXPXSD46H7D7LCC6OUGINX2DYL2ZZPPPFOYBBK4W5NOCLBESPNSA/) |
-| **Scenario 3: Refund & Slash** | `T26GDLEBPMNJB5OM6W6T62CB5H6TG2AZX6J7U6CX24B6RDDVBRBA` | 66580798 | [Lora Tx](https://lora.algokit.io/testnet/transaction/T26GDLEBPMNJB5OM6W6T62CB5H6TG2AZX6J7U6CX24B6RDDVBRBA) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/T26GDLEBPMNJB5OM6W6T62CB5H6TG2AZX6J7U6CX24B6RDDVBRBA/) |
+| Flow | Transaction ID | Confirmation Round | Lora Explorer Link | Pera Explorer Link | Description |
+|---|---|:---:|---|---|---|
+| **Facilitator Co-Signed Settle (Primary Real Fee)** | `VBC6WVDSRFRLMFL7RD3Q7L7I3A3FHXTKCYWPZJAIO2SHYPC5V2VA` | 66582509 | [Lora Tx](https://lora.algokit.io/testnet/transaction/VBC6WVDSRFRLMFL7RD3Q7L7I3A3FHXTKCYWPZJAIO2SHYPC5V2VA) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/VBC6WVDSRFRLMFL7RD3Q7L7I3A3FHXTKCYWPZJAIO2SHYPC5V2VA/) | 1000 micro-USDC ($0.001) real fee transferred via GoPlausible Facilitator co-signed atomic group |
+| **Facilitator Mechanism Verification (Zero-Value Test)** | `MAH5JF36CM34EJEMFIL4KBCTCRQLPHX6YKFTLSV3MKFOOKFRBHDQ` | 66580791 | [Lora Tx](https://lora.algokit.io/testnet/transaction/MAH5JF36CM34EJEMFIL4KBCTCRQLPHX6YKFTLSV3MKFOOKFRBHDQ) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/MAH5JF36CM34EJEMFIL4KBCTCRQLPHX6YKFTLSV3MKFOOKFRBHDQ/) | Cryptographic co-signing and gasless relay mechanism verification |
+| **Escrow Smart Contract** | `App #769236555` | 66480120 | [Lora App #769236555](https://lora.algokit.io/testnet/application/769236555) | [Pera App #769236555](https://testnet.explorer.perawallet.app/application/769236555/) | PyTeal stateful application holding provider bonds and target API payments |
+| **Scenario 1: SLA Pass Settle** | `FXPXSD46H7D7LCC6OUGINX2DYL2ZZPPPFOYBBK4W5NOCLBESPNSA` | 66580795 | [Lora Tx](https://lora.algokit.io/testnet/transaction/FXPXSD46H7D7LCC6OUGINX2DYL2ZZPPPFOYBBK4W5NOCLBESPNSA) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/FXPXSD46H7D7LCC6OUGINX2DYL2ZZPPPFOYBBK4W5NOCLBESPNSA/) | `approve_and_settle` releases 20,000 micro-units to provider |
+| **Scenario 3: Refund & Slash** | `T26GDLEBPMNJB5OM6W6T62CB5H6TG2AZX6J7U6CX24B6RDDVBRBA` | 66580803 | [Lora Tx](https://lora.algokit.io/testnet/transaction/T26GDLEBPMNJB5OM6W6T62CB5H6TG2AZX6J7U6CX24B6RDDVBRBA) | [Pera Tx](https://testnet.explorer.perawallet.app/tx/T26GDLEBPMNJB5OM6W6T62CB5H6TG2AZX6J7U6CX24B6RDDVBRBA/) | `fail_and_refund` refunds agent and slashes provider bond |
 
 ---
 
@@ -183,9 +184,19 @@ npm run demo
 |---|---|---|:---:|
 | **1** | **x402 payment flow live on Algorand Testnet** | Returns HTTP 402 with CAIP-2 `algorand:SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=`, client signs raw ASA #10458941 payment payload, server verifies and executes upstream call. | **VERIFIED** |
 | **2** | **Demonstrable real transaction checkable on Lora** | Live PyTeal Escrow Application [App #769236555 on Lora](https://lora.algokit.io/testnet/application/769236555) with verifiable on-chain state and transactions. | **VERIFIED** |
-| **3** | **Payment flow works through GoPlausible facilitator** | `verifyPaymentProof.ts` and `shieldCheck.ts` query `https://facilitator.goplausible.xyz/verify` (`isValid: true`) and `/settle` (`success: true`), executing facilitator co-signed settlement tx `MAH5JF36CM34EJEMFIL4KBCTCRQLPHX6YKFTLSV3MKFOOKFRBHDQ`. | **VERIFIED** |
+| **3** | **Payment flow works through GoPlausible facilitator (real non-zero fee)** | `verifyPaymentProof.ts` and `shieldCheck.ts` query `https://facilitator.goplausible.xyz/verify` (`isValid: true`) and `/settle` (`success: true`), executing facilitator co-signed settlement tx `VBC6WVDSRFRLMFL7RD3Q7L7I3A3FHXTKCYWPZJAIO2SHYPC5V2VA` transferring 1000 micro-USDC ($0.001). | **VERIFIED** |
 | **4** | **`package.json` includes relevant `@x402/avm` dependencies** | Root `package.json` includes `@x402/avm` (`^2.19.0`), `@x402/core` (`^2.22.0`), `@x402/fetch` (`^2.22.0`), `@x402/hono` (`^2.22.0`), and `@x402-avm/extensions` (`^2.6.1`). | **VERIFIED** |
 | **5** | **Code genuinely integrates x402** | End-to-end integration across pre-flight firewalling, dynamic client raw byte signing, GoPlausible Facilitator co-signing & settlement, real-time SLA validation, and PyTeal two-phase escrow. | **VERIFIED** |
+
+---
+
+## Known Limitations & Disclosures
+
+1. **Payment Proof Replay Protection:** Replay detection is tracked in-memory per server session (`consumedTxIds`). In production, nonces will be stored in Redis with TTLs matching the transaction expiration window.
+2. **Shared Demo Wallet:** The automated demo scripts use the funded testnet deployer wallet (`YVEH...`) as both agent and provider for self-contained execution. Distinct payer/receiver addresses are fully supported via environment variables (`SECONDARY_TEST_MNEMONIC`, `PAYMENT_WALLET=secondary`).
+3. **Automated CLI Signing:** Private key signing uses a local `.env` mnemonic for automated testing and autonomous agent daemon execution. For end-user browser workflows, signing transitions to non-custodial wallet extensions (Pera, Defly, `@txnlab/use-wallet`).
+4. **Mock Upstream Endpoints:** The demo target APIs (e.g. weather service on `:3001/weather`) are simulated locally to demonstrate deterministic SLA outcomes (latency, freshness, schema compliance); the x402 payment and escrow protocol wrapping them is fully live and on-chain.
+5. **Bazaar Registration:** The GoPlausible bazaar registry endpoint is not publicly open for external autonomous registrations; discovery metadata is exposed locally in kit-compliant format at `GET /api/discovery`.
 
 ---
 
@@ -202,4 +213,5 @@ To transition from Algorand Testnet to Mainnet:
 ## Team
 
 - **Vishal D & Team SLAShield402** — Web3 & AI Agents Engineers.
+
 

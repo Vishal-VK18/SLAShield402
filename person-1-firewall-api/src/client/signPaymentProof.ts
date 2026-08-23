@@ -30,6 +30,27 @@ export interface SignedPaymentProof {
   assetId: number;
 }
 
+function resolvePayerMnemonic(customMnemonic?: string): string {
+  if (customMnemonic) return customMnemonic;
+
+  const selection = (process.env.PAYMENT_WALLET || 'primary').trim().toLowerCase();
+  if (selection === 'secondary') {
+    const secMnemonic = process.env.SECONDARY_TEST_MNEMONIC;
+    if (!secMnemonic || !secMnemonic.trim()) {
+      throw new Error(
+        'Secondary wallet requested (PAYMENT_WALLET=secondary), but SECONDARY_TEST_MNEMONIC is not configured in .env.'
+      );
+    }
+    return secMnemonic.trim();
+  }
+
+  const primaryMnemonic = process.env.DEPLOYER_MNEMONIC || process.env.AVM_MNEMONIC;
+  if (!primaryMnemonic) {
+    throw new Error('Missing PRIMARY wallet mnemonic: DEPLOYER_MNEMONIC or AVM_MNEMONIC required.');
+  }
+  return primaryMnemonic.trim();
+}
+
 /**
  * [SECURITY NOTICE & NON-CUSTODIAL MODEL]
  * In production dApps, human users sign non-custodially via wallet extensions (Pera, Defly, @txnlab/use-wallet).
@@ -48,11 +69,7 @@ export async function createSignedPaymentPayload(
     ...paymentRequiredChallenge,
   };
 
-  const mnemonic = customMnemonic || process.env.DEPLOYER_MNEMONIC || process.env.AVM_MNEMONIC;
-  if (!mnemonic) {
-    throw new Error('Missing client wallet mnemonic: DEPLOYER_MNEMONIC or AVM_MNEMONIC required.');
-  }
-
+  const mnemonic = resolvePayerMnemonic(customMnemonic);
   const account = algosdk.mnemonicToSecretKey(mnemonic);
   const senderAddr = account.addr.toString();
 
@@ -84,11 +101,7 @@ export async function signAndBroadcastPayment(
   noteStr?: string,
   assetId: number = DEFAULT_USDC_ASA_ID
 ): Promise<SignedPaymentProof> {
-  const mnemonic = customMnemonic || process.env.DEPLOYER_MNEMONIC || process.env.AVM_MNEMONIC;
-  if (!mnemonic) {
-    throw new Error('Missing client wallet mnemonic: DEPLOYER_MNEMONIC or AVM_MNEMONIC required.');
-  }
-
+  const mnemonic = resolvePayerMnemonic(customMnemonic);
   const account = algosdk.mnemonicToSecretKey(mnemonic);
   const senderAddr = account.addr.toString();
   const params = await algodClient.getTransactionParams().do();

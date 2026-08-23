@@ -1,6 +1,8 @@
 import { createSignedPaymentPayload } from './client/signPaymentProof.js';
 
 async function main() {
+  const walletSelection = (process.env.PAYMENT_WALLET || 'primary').trim().toLowerCase();
+  console.log(`[Payer Config] Active Wallet Mode: ${walletSelection.toUpperCase()} (PAYMENT_WALLET=${process.env.PAYMENT_WALLET || 'primary'})`);
   console.log('======================================================================');
   console.log('▶ STEP 1: Sending request without payment proof to /shield/check...');
   console.log('======================================================================');
