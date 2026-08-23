@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ShieldEvent, DashboardStats, WalletStatusResponse, ActiveTab } from '../types.js';
 
 interface OverviewTabProps {
@@ -11,6 +11,41 @@ interface OverviewTabProps {
   runningCheck: boolean;
 }
 
+const DISPLAY_NAME = 'ARYA';
+
+const getGreeting = () => {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 12) {
+    return 'Good Morning';
+  }
+
+  if (hour >= 12 && hour < 17) {
+    return 'Good Afternoon';
+  }
+
+  return 'Good Evening';
+};
+
+const getMsUntilNextGreetingPeriod = () => {
+  const now = new Date();
+  const next = new Date(now);
+  const hour = now.getHours();
+
+  if (hour < 5) {
+    next.setHours(5, 0, 0, 0);
+  } else if (hour < 12) {
+    next.setHours(12, 0, 0, 0);
+  } else if (hour < 17) {
+    next.setHours(17, 0, 0, 0);
+  } else {
+    next.setDate(next.getDate() + 1);
+    next.setHours(5, 0, 0, 0);
+  }
+
+  return next.getTime() - now.getTime();
+};
+
 export const OverviewTab: React.FC<OverviewTabProps> = ({
   events,
   stats,
@@ -22,9 +57,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'ALL' | 'SETTLED' | 'BLOCKED' | 'PENALIZED'>('ALL');
+  const [greeting, setGreeting] = useState(getGreeting);
 
-  const primaryAddr = walletStatus?.primary?.address || 'YVEHNV3EWF4GULZHABH64QKOYLE5MO2MSBAAK7O76A2ESACA5OV2AZSOKQ';
-  const shortAddr = primaryAddr.slice(0, 5);
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const scheduleNextGreetingUpdate = () => {
+      setGreeting(getGreeting());
+      timeoutId = setTimeout(scheduleNextGreetingUpdate, getMsUntilNextGreetingPeriod());
+    };
+
+    scheduleNextGreetingUpdate();
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   // Derive display list from live events
   const filteredEvents = events.filter((ev) => {
@@ -58,7 +104,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-[28px] md:text-[32px] font-bold text-charcoal tracking-tight">
-            Good morning, {shortAddr}
+            {greeting}, {DISPLAY_NAME}
           </h1>
           <p className="text-[14px] text-text-muted mt-0.5">
             Monitor your autonomous AI payments, firewall protection, and on-chain SLA outcomes.
