@@ -10,9 +10,9 @@ SLAShield402 is an autonomous AI agent payment firewall and SLA settlement layer
 
 | Name | Role |
 |---|---|
+| Arvin M | x402 Gateway, Firewall & Facilitator Client (Person 1 — `person-1-firewall-api/`) |
+| Vigneshwaran V | SLA Outcome Validator (Person 2 — `person-2-sla-validator/`) |
 | Vishal D | Algorand Smart Contract & Escrow (Person 3 — `person-3-algorand-contract/`) |
-| Vigneshwaran V | x402 Gateway, Firewall & Facilitator Client (Person 1 — `person-1-firewall-api/`) |
-| Arvin M | SLA Outcome Validator (Person 2 — `person-2-sla-validator/`) |
 
 ---
 
